@@ -1,0 +1,4 @@
+[submodule "spec"]
+	path = spec
+	url = https://github.com/radu-matei/wasi-nn
+	branch = onnx
