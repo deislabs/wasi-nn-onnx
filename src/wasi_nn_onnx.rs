@@ -1,16 +1,26 @@
 use crate::{
-    ctx::{WasiNnCtx, WasiNnError, WasiNnResult as Result},
+    ctx::{OnnxSession, WasiNnCtx, WasiNnError, WasiNnResult as Result},
     witx::{
         types::{
             BufferSize, ExecutionTarget, Graph, GraphBuilderArray, GraphEncoding,
-            GraphExecutionContext, Tensor, TensorType,
+            GraphExecutionContext, Tensor,
         },
         wasi_ephemeral_nn::WasiEphemeralNn,
     },
 };
-use onnxruntime::{environment::Environment, GraphOptimizationLevel, LoggingLevel};
+use onnxruntime::{
+    environment::Environment,
+    ndarray::{Array, Dimension},
+    GraphOptimizationLevel, LoggingLevel, TensorElementDataType, TypeToTensorElementDataType,
+};
+use std::{borrow::BorrowMut, fmt::Debug};
 
-impl WasiEphemeralNn for WasiNnCtx {
+impl<TIn, TOut, D> WasiEphemeralNn for WasiNnCtx<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
     fn load(
         &mut self,
         builder: &GraphBuilderArray,
@@ -60,18 +70,26 @@ impl WasiEphemeralNn for WasiNnCtx {
             .new_owned_session_builder()?
             .with_optimization_level(GraphOptimizationLevel::All)?
             .with_model_from_memory(model_bytes)?;
-        let gec = state.key(state.sessions.keys());
+        let session = OnnxSession::with_session(session)?;
+        let gec = state.key(state.executions.keys());
         log::info!(
             "wasi_nn_onnx::init_execution_context: inserting graph execution context with session: {:#?} with size {:#?}",
             gec,
             session
         );
 
-        state.sessions.insert(gec, session);
+        state.executions.insert(gec, session);
 
         Ok(gec)
     }
 
+    // If there are multiple input tensors, the guest
+    // should call this function in order, as this actually
+    // constructs the final input tensor used for the inference.
+    // TODO
+    // If we wanted to avoid this, we could create an intermediary
+    // HashMap<u32, Array<TIn, D>> and collapse it into a Vec<Array<TIn, D>>
+    // when performing the inference.
     fn set_input(
         &mut self,
         context: GraphExecutionContext,
@@ -79,7 +97,7 @@ impl WasiEphemeralNn for WasiNnCtx {
         tensor: &Tensor,
     ) -> Result<()> {
         let mut state = self.state.write()?;
-        let mut session = match state.sessions.get_mut(&context) {
+        let mut execution = match state.executions.get_mut(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -91,9 +109,10 @@ impl WasiEphemeralNn for WasiNnCtx {
             }
         };
 
-        log::info!("wasi_nn_onnx::set_input: session: {:#?}", session);
+        log::info!("wasi_nn_onnx::set_input: execution: {:#?}", execution);
 
-        let expected = session
+        let expected = execution
+            .session
             .inputs
             .get(index as usize)
             .unwrap()
@@ -108,14 +127,31 @@ impl WasiEphemeralNn for WasiNnCtx {
             .map(|d| *d as usize)
             .collect::<Vec<_>>();
 
+        let input_type: TensorElementDataType = tensor.type_.into();
+
         log::info!(
-            "wasi_nn_onnx::set_input: expected dimensions: {:#?}, input dimensions: {:#?}",
+            "wasi_nn_onnx::set_input: expected dimensions: {:#?}, input dimensions: {:#?}, input type: {:#?}",
             expected,
-            input
+            input,
+            input_type
         );
 
-        // TODO
-        // assume f32 for now?
+        // TODO: check the shapes are equal
+
+        // TODO: transorm input tensor into actual data based
+        // on shape and data type.
+
+        // let x = tensor.data;
+
+        // let data = tensor.data.as_slice()?.to_vec();
+        // let mut input_arrays = execution
+        //     .input_arrays
+        //     .borrow_mut()
+        //     .as_ref()
+        //     .unwrap_or(&vec![]);
+
+        // let mut array = Array::from_shape_vec(input, vec![])?;
+        // input_arrays.push(array);
 
         todo!()
     }

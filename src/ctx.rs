@@ -1,13 +1,13 @@
-use crate::witx::types::{Graph, GraphExecutionContext};
+use crate::witx::types::{Graph, GraphExecutionContext, TensorType};
 use onnxruntime::{
-    ndarray::{Array, Dimension},
+    ndarray::{Array, Dimension, ShapeError},
     session::OwnedSession,
-    OrtError, TypeToTensorElementDataType,
+    OrtError, TensorElementDataType, TypeToTensorElementDataType,
 };
 use std::{
     collections::{btree_map::Keys, BTreeMap},
     fmt::Debug,
-    sync::{Arc, PoisonError, RwLock},
+    sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
 use thiserror::Error;
 use wiggle::GuestError;
@@ -33,41 +33,67 @@ impl From<OrtError> for WasiNnError {
     }
 }
 
-impl From<PoisonError<std::sync::RwLockReadGuard<'_, State>>> for WasiNnError {
-    fn from(_: PoisonError<std::sync::RwLockReadGuard<'_, State>>) -> Self {
+impl<'a, TIn, TOut, D> From<PoisonError<std::sync::RwLockReadGuard<'_, State<TIn, TOut, D>>>>
+    for WasiNnError
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    fn from(_: PoisonError<RwLockReadGuard<'_, State<TIn, TOut, D>>>) -> Self {
         WasiNnError::RuntimeError
     }
 }
 
-impl From<PoisonError<std::sync::RwLockWriteGuard<'_, State>>> for WasiNnError {
-    fn from(_: PoisonError<std::sync::RwLockWriteGuard<'_, State>>) -> Self {
+impl<'a, TIn, TOut, D> From<PoisonError<RwLockWriteGuard<'_, State<TIn, TOut, D>>>> for WasiNnError
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    fn from(_: PoisonError<RwLockWriteGuard<'_, State<TIn, TOut, D>>>) -> Self {
         WasiNnError::RuntimeError
     }
 }
 
-impl From<PoisonError<&mut State>> for WasiNnError {
-    fn from(_: PoisonError<&mut State>) -> Self {
+impl<'a, TIn, TOut, D> From<PoisonError<&mut State<TIn, TOut, D>>> for WasiNnError
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    fn from(_: PoisonError<&mut State<TIn, TOut, D>>) -> Self {
+        WasiNnError::RuntimeError
+    }
+}
+
+impl From<ShapeError> for WasiNnError {
+    fn from(_: ShapeError) -> Self {
         WasiNnError::RuntimeError
     }
 }
 
 pub(crate) type WasiNnResult<T> = Result<T, WasiNnError>;
 
-pub struct WasiNnCtx {
-    pub state: Arc<RwLock<State>>,
+pub struct WasiNnCtx<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    pub state: Arc<RwLock<State<TIn, TOut, D>>>,
 }
 
-pub struct State {
-    pub sessions: BTreeMap<GraphExecutionContext, OwnedSession>,
+pub struct State<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    pub executions: BTreeMap<GraphExecutionContext, OnnxSession<TIn, TOut, D>>,
     pub models: BTreeMap<Graph, Vec<u8>>,
 }
 
-// TODO
-//
-// The actual session we keep track of should contain the inputs and
-// outputs as well.
-// There should be a way to introduce this without carrying around all
-// the generic types in State and WasiNnCtx.
 #[derive(Debug)]
 pub struct OnnxSession<TIn, TOut, D>
 where
@@ -95,7 +121,12 @@ where
     }
 }
 
-impl State {
+impl<TIn, TOut, D> State<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
     pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
         match keys.last() {
             Some(&k) => {
@@ -103,6 +134,17 @@ impl State {
                 K::from(last + 1)
             }
             None => K::from(0),
+        }
+    }
+}
+
+impl From<TensorType> for TensorElementDataType {
+    fn from(tt: TensorType) -> Self {
+        match tt {
+            TensorType::F16 | TensorType::F32 => Self::Float,
+
+            TensorType::U8 => Self::Uint8,
+            TensorType::I32 => Self::Int32,
         }
     }
 }
