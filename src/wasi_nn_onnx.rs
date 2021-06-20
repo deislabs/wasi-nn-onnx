@@ -3,7 +3,7 @@ use crate::{
     witx::{
         types::{
             BufferSize, ExecutionTarget, Graph, GraphBuilderArray, GraphEncoding,
-            GraphExecutionContext, Tensor,
+            GraphExecutionContext, Tensor, TensorType,
         },
         wasi_ephemeral_nn::WasiEphemeralNn,
     },
@@ -24,6 +24,7 @@ impl WasiEphemeralNn for WasiNnCtx {
         );
 
         if encoding != GraphEncoding::Onnx {
+            log::error!("wasi_nn_onnx::load current implementation can only load ONNX models");
             return Err(WasiNnError::InvalidEncodingError);
         }
 
@@ -46,7 +47,10 @@ impl WasiEphemeralNn for WasiNnCtx {
         let mut state = self.state.write()?;
         let model_bytes = match state.models.get(&graph) {
             Some(mb) => mb,
-            None => return Err(WasiNnError::RuntimeError),
+            None => {
+                log::error!("wasi_nn_onnx::init_execution_context: cannot find model in state with graph {:#?}", graph);
+                return Err(WasiNnError::RuntimeError);
+            }
         };
 
         let environment = Environment::builder()
@@ -70,10 +74,49 @@ impl WasiEphemeralNn for WasiNnCtx {
 
     fn set_input(
         &mut self,
-        _context: GraphExecutionContext,
-        _index: u32,
-        _tensor: &Tensor,
+        context: GraphExecutionContext,
+        index: u32,
+        tensor: &Tensor,
     ) -> Result<()> {
+        let mut state = self.state.write()?;
+        let mut session = match state.sessions.get_mut(&context) {
+            Some(s) => s,
+            None => {
+                log::error!(
+                    "wasi_nn_onnx::set_input: cannot find session in state with context {:#?}",
+                    context
+                );
+
+                return Err(WasiNnError::RuntimeError);
+            }
+        };
+
+        log::info!("wasi_nn_onnx::set_input: session: {:#?}", session);
+
+        let expected = session
+            .inputs
+            .get(index as usize)
+            .unwrap()
+            .dimensions()
+            .map(|d| d.unwrap())
+            .collect::<Vec<usize>>();
+
+        let input = tensor
+            .dimensions
+            .as_slice()?
+            .iter()
+            .map(|d| *d as usize)
+            .collect::<Vec<_>>();
+
+        log::info!(
+            "wasi_nn_onnx::set_input: expected dimensions: {:#?}, input dimensions: {:#?}",
+            expected,
+            input
+        );
+
+        // TODO
+        // assume f32 for now?
+
         todo!()
     }
 

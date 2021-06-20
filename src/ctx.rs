@@ -1,10 +1,14 @@
+use crate::witx::types::{Graph, GraphExecutionContext};
+use onnxruntime::{
+    ndarray::{Array, Dimension},
+    session::OwnedSession,
+    OrtError, TypeToTensorElementDataType,
+};
 use std::{
-    collections::{hash_map::Keys, HashMap},
+    collections::{btree_map::Keys, BTreeMap},
+    fmt::Debug,
     sync::{Arc, PoisonError, RwLock},
 };
-
-use crate::witx::types::{Graph, GraphExecutionContext};
-use onnxruntime::{session::OwnedSession, OrtError};
 use thiserror::Error;
 use wiggle::GuestError;
 
@@ -54,8 +58,41 @@ pub struct WasiNnCtx {
 }
 
 pub struct State {
-    pub sessions: HashMap<GraphExecutionContext, OwnedSession>,
-    pub models: HashMap<Graph, Vec<u8>>,
+    pub sessions: BTreeMap<GraphExecutionContext, OwnedSession>,
+    pub models: BTreeMap<Graph, Vec<u8>>,
+}
+
+// TODO
+//
+// The actual session we keep track of should contain the inputs and
+// outputs as well.
+// There should be a way to introduce this without carrying around all
+// the generic types in State and WasiNnCtx.
+#[derive(Debug)]
+pub struct OnnxSession<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    pub session: OwnedSession,
+    pub input_arrays: Option<Vec<Array<TIn, D>>>,
+    pub output_arrays: Option<Vec<Array<TOut, D>>>,
+}
+
+impl<TIn, TOut, D> OnnxSession<TIn, TOut, D>
+where
+    TIn: TypeToTensorElementDataType + Debug + Clone,
+    TOut: TypeToTensorElementDataType + Debug + Clone,
+    D: Dimension,
+{
+    pub fn with_session(session: OwnedSession) -> WasiNnResult<Self> {
+        Ok(Self {
+            session,
+            input_arrays: None,
+            output_arrays: None,
+        })
+    }
 }
 
 impl State {

@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
+
 use crate::ctx::{WasiNnCtx, WasiNnError};
-use types::{NnErrno, UserErrorConversion};
+use types::{Graph, GraphExecutionContext, NnErrno, UserErrorConversion};
 use wiggle::GuestErrorType;
 
 wiggle::from_witx!({
@@ -22,5 +24,35 @@ impl<'a> UserErrorConversion for WasiNnCtx {
 impl GuestErrorType for NnErrno {
     fn success() -> Self {
         Self::Success
+    }
+}
+
+impl Ord for Graph {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let (s, o) = (*self, *other);
+        let s: u32 = s.into();
+        let o: u32 = o.into();
+        s.cmp(&o)
+    }
+}
+
+impl PartialOrd for Graph {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for GraphExecutionContext {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let (s, o) = (*self, *other);
+        let s: u32 = s.into();
+        let o: u32 = o.into();
+        s.cmp(&o)
+    }
+}
+
+impl PartialOrd for GraphExecutionContext {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
