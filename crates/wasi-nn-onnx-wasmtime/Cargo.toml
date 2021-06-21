@@ -10,6 +10,7 @@ byteorder = "1.4"
 futures = "0.3"
 http = "0.2"
 log = { version = "0.4", default-features = false }
+env_logger = "0.8"
 onnxruntime = { git = "https://github.com/radu-matei/onnxruntime-rs", branch = "owned-session" }
 reqwest = { version = "0.11", default-features = true, features = ["json", "blocking"] }
 structopt = "0.3.21"
@@ -21,5 +22,4 @@ wasmtime-runtime = "0.28"
 wasmtime-wasi = "0.28"
 wasi-common = "0.28"
 wasi-cap-std-sync = "0.28"
-wasi-experimental-http-wasmtime = "0.5"
 wiggle =  "0.28"

@@ -12,5 +12,5 @@ This is experimental work in progress that is not guaranteed to compile or run.
   follows
   [the OpenVINO implementation from the Wasmtime repo](https://github.com/bytecodealliance/wasmtime/tree/main/crates/wasi-nn).
 - [`crates/wasi-nn`](crates/wasi-nn) contains a fork of the
-  [guest bindings for WASN-NN](https://github.com/bytecodealliance/wasi-nn),
+  [guest bindings for WASI-NN](https://github.com/bytecodealliance/wasi-nn),
   modified to include ONNX options.
