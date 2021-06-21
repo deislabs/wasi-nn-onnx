@@ -3,6 +3,8 @@ use wasi_nn_onnx_wasmtime::WasiNnCtx;
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use crate::Ctx;
     use anyhow::Error;
     use wasi_nn_onnx_wasmtime::ctx::WasiNnCtx;
@@ -10,21 +12,31 @@ mod tests {
     use wasmtime_wasi::sync::WasiCtxBuilder;
 
     #[test]
-    fn test_rust_load() {
+    fn rust_tests() {
         init();
-
-        run_func(
-            "target/wasm32-wasi/release/rust.wasm".to_string(),
-            "_start".to_string(),
-        )
-        .unwrap();
+        run_tests("target/wasm32-wasi/release/rust.wasm", vec!["load_empty"]).unwrap();
     }
 
     fn init() {
-        env_logger::init();
+        let _ = env_logger::builder().is_test(true).try_init();
     }
 
-    fn run_func(filename: String, name: String) -> Result<(), Error> {
+    fn run_tests<S: Into<String> + AsRef<Path>>(filename: S, funcs: Vec<S>) -> Result<(), Error> {
+        let (instance, mut store) = create_instance(filename)?;
+
+        for f in funcs {
+            let func = instance
+                .get_func(&mut store, f.into().as_str())
+                .unwrap_or_else(|| panic!("cannot find function"));
+            func.call(&mut store, &[])?;
+        }
+
+        Ok(())
+    }
+
+    fn create_instance<S: Into<String> + AsRef<Path>>(
+        filename: S,
+    ) -> Result<(Instance, Store<Ctx>), Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, Ctx::default());
         let mut linker = Linker::new(&engine);
@@ -33,13 +45,9 @@ mod tests {
         populate_with_wasi(&mut store, &mut linker)?;
 
         let module = Module::from_file(linker.engine(), filename)?;
-
         let instance = linker.instantiate(&mut store, &module)?;
-        let func = instance
-            .get_func(&mut store, name.as_str())
-            .unwrap_or_else(|| panic!("cannot find _start"));
-        func.call(&mut store, &[])?;
-        Ok(())
+
+        Ok((instance, store))
     }
 
     fn populate_with_wasi(store: &mut Store<Ctx>, linker: &mut Linker<Ctx>) -> Result<(), Error> {
