@@ -1,0 +1,8 @@
+[package]
+name = "rust"
+version = "0.1.0"
+authors = ["Radu M <root@radu.sh>"]
+edition = "2018"
+
+[dependencies]
+wasi-nn = { path = "../../crates/wasi-nn/rust" }

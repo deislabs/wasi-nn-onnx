@@ -2,3 +2,7 @@
 	path = spec
 	url = https://github.com/radu-matei/wasi-nn
 	branch = onnx
+[submodule "crates/wasi-nn"]
+	path = crates/wasi-nn
+	url = https://github.com/radu-matei/wasi-nn-guest
+	branch = onnx

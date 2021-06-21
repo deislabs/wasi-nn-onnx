@@ -63,6 +63,15 @@ pub struct WasiNnCtx {
     pub state: Arc<RwLock<State>>,
 }
 
+impl WasiNnCtx {
+    pub fn new() -> WasiNnResult<Self> {
+        Ok(Self {
+            state: Arc::new(RwLock::new(State::default())),
+        })
+    }
+}
+
+#[derive(Default)]
 pub struct State {
     pub executions: BTreeMap<GraphExecutionContext, OnnxSession>,
     pub models: BTreeMap<Graph, Vec<u8>>,
