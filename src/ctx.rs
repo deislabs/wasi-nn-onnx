@@ -71,6 +71,32 @@ pub struct State {
 #[derive(Debug)]
 pub struct OnnxSession {
     pub session: OwnedSession,
+
+    // Currently, the input and output arrays are hardcoded to
+    // F32. However, this should not always be the case.
+    // But because each input or output array can have a *different*
+    // tensor type, introducing a struct-leve generic type
+    // parameter does not seem to solve the issue.
+    // The most straightforward way would be to (re)introduce
+    // trait constraints, as shown below:
+
+    // where
+    // TIn: TypeToTensorElementDataType + Debug + Clone,
+    // TOut: TypeToTensorElementDataType + Debug + Clone,
+    // D: ndarray::Dimension,
+
+    // The main goal here is to be able to constrain the
+    // input and output array types, but without introducing
+    // the constraint to State and WasiNnCtx.
+    //
+    // A workaround for this could be to store all inputs and
+    // outputs as Vec<u8>, and only transform them
+    // to their semantically relevant types just-in-time (for
+    // inputs that is when compute is called, for outputs
+    // when get_output is called).
+    // This has some obvious performance downsides, but would
+    // significantly simplify the session struct without
+    // sacrificing the input and output type options.
     pub input_arrays: Option<Vec<Array<f32, Dim<IxDynImpl>>>>,
     pub output_arrays: Option<Vec<Array<f32, Dim<IxDynImpl>>>>,
 }

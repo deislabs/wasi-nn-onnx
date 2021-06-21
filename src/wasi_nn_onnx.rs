@@ -12,6 +12,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use onnxruntime::{
     environment::Environment,
     ndarray::{Array, Dim, IxDynImpl},
+    session::Output,
     tensor::OrtOwnedTensor,
     GraphOptimizationLevel, LoggingLevel, TensorElementDataType,
 };
@@ -210,7 +211,7 @@ impl WasiEphemeralNn for WasiNnCtx {
 
     fn compute(&mut self, context: GraphExecutionContext) -> Result<()> {
         let mut state = self.state.write()?;
-        let execution = match state.executions.get_mut(&context) {
+        let mut execution = match state.executions.get_mut(&context) {
             Some(s) => s,
             None => {
                 log::error!(
@@ -228,10 +229,48 @@ impl WasiEphemeralNn for WasiNnCtx {
             .unwrap_or(&vec![])
             .clone();
 
-        let _x: std::vec::Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>> =
-            execution.session.run(input_arrays).unwrap();
+        let outputs: Vec<Output> = execution.session.outputs.clone();
+
+        let output_arrays: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>> =
+            execution.session.run(input_arrays)?;
+
+        match execution.output_arrays {
+            Some(_) => {
+                log::error!("wasi_nn_onnx::compute: ");
+                return Err(WasiNnError::RuntimeError);
+            }
+            None => {
+                execution.output_arrays = Some(vec_from_out_tensors(output_arrays, outputs));
+            }
+        };
         todo!()
     }
+}
+
+// TODO
+// remove hardcoded f32
+fn vec_from_out_tensors(
+    arrays: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>>,
+    outputs: Vec<Output>,
+) -> Vec<Array<f32, Dim<IxDynImpl>>> {
+    let mut res = Vec::new();
+    for index in 0..arrays.len() {
+        let shape = outputs
+            .get(index)
+            .unwrap()
+            .dimensions()
+            .map(|d| d.unwrap())
+            .collect::<Vec<usize>>();
+
+        let array = Array::from_shape_vec(
+            shape,
+            arrays.get(index).unwrap().as_slice().unwrap().to_vec(),
+        )
+        .unwrap();
+        res.push(array);
+    }
+
+    res
 }
 
 // TODO

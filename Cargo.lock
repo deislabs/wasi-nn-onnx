@@ -1160,7 +1160,7 @@ checksum = "692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56"
 [[package]]
 name = "onnxruntime"
 version = "0.0.12"
-source = "git+https://github.com/radu-matei/onnxruntime-rs?branch=owned-session#6020c361a884294e72ebf4d32d352cf025ee149b"
+source = "git+https://github.com/radu-matei/onnxruntime-rs?branch=owned-session#5f47f47b24793c0d0fbb314e854cc04395b9108f"
 dependencies = [
  "lazy_static",
  "ndarray",
@@ -1172,7 +1172,7 @@ dependencies = [
 [[package]]
 name = "onnxruntime-sys"
 version = "0.0.12"
-source = "git+https://github.com/radu-matei/onnxruntime-rs?branch=owned-session#6020c361a884294e72ebf4d32d352cf025ee149b"
+source = "git+https://github.com/radu-matei/onnxruntime-rs?branch=owned-session#5f47f47b24793c0d0fbb314e854cc04395b9108f"
 dependencies = [
  "flate2",
  "tar",
