@@ -1,8 +1,8 @@
 use crate::witx::types::{Graph, GraphExecutionContext, TensorType};
 use onnxruntime::{
-    ndarray::{Array, Dimension, ShapeError},
+    ndarray::{Array, Dim, IxDynImpl, ShapeError},
     session::OwnedSession,
-    OrtError, TensorElementDataType, TypeToTensorElementDataType,
+    OrtError, TensorElementDataType,
 };
 use std::{
     collections::{btree_map::Keys, BTreeMap},
@@ -33,36 +33,20 @@ impl From<OrtError> for WasiNnError {
     }
 }
 
-impl<'a, TIn, TOut, D> From<PoisonError<std::sync::RwLockReadGuard<'_, State<TIn, TOut, D>>>>
-    for WasiNnError
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
-    fn from(_: PoisonError<RwLockReadGuard<'_, State<TIn, TOut, D>>>) -> Self {
+impl<'a> From<PoisonError<std::sync::RwLockReadGuard<'_, State>>> for WasiNnError {
+    fn from(_: PoisonError<RwLockReadGuard<'_, State>>) -> Self {
         WasiNnError::RuntimeError
     }
 }
 
-impl<'a, TIn, TOut, D> From<PoisonError<RwLockWriteGuard<'_, State<TIn, TOut, D>>>> for WasiNnError
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
-    fn from(_: PoisonError<RwLockWriteGuard<'_, State<TIn, TOut, D>>>) -> Self {
+impl<'a> From<PoisonError<RwLockWriteGuard<'_, State>>> for WasiNnError {
+    fn from(_: PoisonError<RwLockWriteGuard<'_, State>>) -> Self {
         WasiNnError::RuntimeError
     }
 }
 
-impl<'a, TIn, TOut, D> From<PoisonError<&mut State<TIn, TOut, D>>> for WasiNnError
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
-    fn from(_: PoisonError<&mut State<TIn, TOut, D>>) -> Self {
+impl<'a> From<PoisonError<&mut State>> for WasiNnError {
+    fn from(_: PoisonError<&mut State>) -> Self {
         WasiNnError::RuntimeError
     }
 }
@@ -75,43 +59,23 @@ impl From<ShapeError> for WasiNnError {
 
 pub(crate) type WasiNnResult<T> = Result<T, WasiNnError>;
 
-pub struct WasiNnCtx<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
-    pub state: Arc<RwLock<State<TIn, TOut, D>>>,
+pub struct WasiNnCtx {
+    pub state: Arc<RwLock<State>>,
 }
 
-pub struct State<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
-    pub executions: BTreeMap<GraphExecutionContext, OnnxSession<TIn, TOut, D>>,
+pub struct State {
+    pub executions: BTreeMap<GraphExecutionContext, OnnxSession>,
     pub models: BTreeMap<Graph, Vec<u8>>,
 }
 
 #[derive(Debug)]
-pub struct OnnxSession<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
+pub struct OnnxSession {
     pub session: OwnedSession,
-    pub input_arrays: Option<Vec<Array<TIn, D>>>,
-    pub output_arrays: Option<Vec<Array<TOut, D>>>,
+    pub input_arrays: Option<Vec<Array<f32, Dim<IxDynImpl>>>>,
+    pub output_arrays: Option<Vec<Array<f32, Dim<IxDynImpl>>>>,
 }
 
-impl<TIn, TOut, D> OnnxSession<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
+impl OnnxSession {
     pub fn with_session(session: OwnedSession) -> WasiNnResult<Self> {
         Ok(Self {
             session,
@@ -121,12 +85,7 @@ where
     }
 }
 
-impl<TIn, TOut, D> State<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
+impl State {
     pub fn key<K: Into<u32> + From<u32> + Copy, V>(&self, keys: Keys<K, V>) -> K {
         match keys.last() {
             Some(&k) => {

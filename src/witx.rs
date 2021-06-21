@@ -1,6 +1,5 @@
 use crate::ctx::{WasiNnCtx, WasiNnError};
-use onnxruntime::{ndarray::Dimension, TypeToTensorElementDataType};
-use std::{cmp::Ordering, fmt::Debug};
+use std::cmp::Ordering;
 use types::{Graph, GraphExecutionContext, NnErrno, UserErrorConversion};
 use wiggle::GuestErrorType;
 
@@ -9,12 +8,7 @@ wiggle::from_witx!({
     errors: { nn_errno => WasiNnError }
 });
 
-impl<'a, TIn, TOut, D> UserErrorConversion for WasiNnCtx<TIn, TOut, D>
-where
-    TIn: TypeToTensorElementDataType + Debug + Clone,
-    TOut: TypeToTensorElementDataType + Debug + Clone,
-    D: Dimension,
-{
+impl<'a> UserErrorConversion for WasiNnCtx {
     fn nn_errno_from_wasi_nn_error(&mut self, e: WasiNnError) -> Result<NnErrno, wiggle::Trap> {
         eprintln!("Host error: {:?}", e);
         match e {
