@@ -1,5 +1,5 @@
 [package]
-name = "wasi-nn-onnx-sample"
+name = "wasi-nn-onnx-wasmtime"
 version = "0.1.0"
 authors = ["Radu M <root@radu.sh>"]
 edition = "2018"
@@ -23,13 +23,3 @@ wasi-common = "0.28"
 wasi-cap-std-sync = "0.28"
 wasi-experimental-http-wasmtime = "0.5"
 wiggle =  "0.28"
-
-[[bin]]
-name = "wasmtime-onnx"
-path = "bin/wasmtime-onnx.rs"
-
-[workspace]
-members = [
-    "crates/wasi-nn-onnx-wasmtime",
-    "crates/wasi-nn/rust",
-]

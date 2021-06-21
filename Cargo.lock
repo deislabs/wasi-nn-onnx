@@ -2260,7 +2260,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "wasi-nn-onnx"
+name = "wasi-nn"
+version = "0.1.0"
+
+[[package]]
+name = "wasi-nn-onnx-sample"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "futures",
+ "http",
+ "log",
+ "onnxruntime",
+ "reqwest",
+ "structopt",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "wasi-cap-std-sync",
+ "wasi-common",
+ "wasi-experimental-http-wasmtime",
+ "wasmtime",
+ "wasmtime-runtime",
+ "wasmtime-wasi",
+ "wiggle",
+]
+
+[[package]]
+name = "wasi-nn-onnx-wasmtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
