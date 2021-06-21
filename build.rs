@@ -12,8 +12,7 @@ fn main() {
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/ctx.rs");
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/witx.rs");
 
-    println!("cargo:rustc-link-search=native={}", "./target");
-    // println!("cargo:rustc-link-lib=dylib={}", "onnxruntime");
+    println!("cargo:rustc-link-search=native=./target");
     println!("cargo:rustc-link-lib=onnxruntime");
 
     cargo_build_example(TESTS_DIR, RUST_EXAMPLE);

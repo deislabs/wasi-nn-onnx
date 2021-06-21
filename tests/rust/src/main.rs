@@ -1,6 +1,7 @@
-use wasi_nn;
+fn main() {}
 
-fn main() {
+#[no_mangle]
+fn load_empty() {
     let _ = unsafe {
         wasi_nn::load(
             &[&[]],
