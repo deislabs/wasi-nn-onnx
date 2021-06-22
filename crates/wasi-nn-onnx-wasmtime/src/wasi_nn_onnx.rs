@@ -46,6 +46,11 @@ impl WasiEphemeralNn for WasiNnCtx {
         );
         state.models.insert(graph, model_bytes);
 
+        log::info!(
+            "wasi_nn_onnx: load: current number of models: {:#?}",
+            state.models.len()
+        );
+
         Ok(graph)
     }
 
@@ -71,7 +76,7 @@ impl WasiEphemeralNn for WasiNnCtx {
         let session = OnnxSession::with_session(session)?;
         let gec = state.key(state.executions.keys());
         log::info!(
-            "wasi_nn_onnx::init_execution_context: inserting graph execution context with session: {:#?} with size {:#?}",
+            "wasi_nn_onnx::init_execution_context: inserting graph execution context with session: {:#?} with session {:#?}",
             gec,
             session
         );

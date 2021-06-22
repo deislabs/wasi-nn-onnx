@@ -5,4 +5,6 @@ authors = ["Radu M <root@radu.sh>"]
 edition = "2018"
 
 [dependencies]
+env_logger = "0.8"
+log = { version = "0.4", default-features = false }
 wasi-nn = { path = "../../crates/wasi-nn/rust" }
