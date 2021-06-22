@@ -17,7 +17,14 @@ mod tests {
         init();
         run_tests(
             "target/wasm32-wasi/release/rust.wasm",
-            vec!["load_empty", "load_model", "init_execution_context"],
+            vec![
+                "load_empty",
+                "load_model",
+                "init_execution_context",
+                "set_input",
+                "compute",
+                "get_output",
+            ],
         )
         .unwrap();
     }

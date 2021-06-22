@@ -76,9 +76,8 @@ impl WasiEphemeralNn for WasiNnCtx {
         let session = OnnxSession::with_session(session)?;
         let gec = state.key(state.executions.keys());
         log::info!(
-            "wasi_nn_onnx::init_execution_context: inserting graph execution context with session: {:#?} with session {:#?}",
-            gec,
-            session
+            "wasi_nn_onnx::init_execution_context: inserting graph execution context: {:#?}",
+            gec
         );
 
         state.executions.insert(gec, session);
@@ -110,8 +109,6 @@ impl WasiEphemeralNn for WasiNnCtx {
                 return Err(WasiNnError::RuntimeError);
             }
         };
-
-        log::info!("wasi_nn_onnx::set_input: execution: {:#?}", execution);
 
         let expected = execution
             .session
@@ -158,11 +155,18 @@ impl WasiEphemeralNn for WasiNnCtx {
         let input = Array::from_shape_vec(input, data)?;
 
         match execution.input_arrays {
-            Some(ref mut input_arrays) => input_arrays.push(input),
+            Some(ref mut input_arrays) => {
+                input_arrays.push(input);
+                log::info!(
+                    "wasi_nn_onnx::set_input: input arrays now contains {} items",
+                    input_arrays.len(),
+                );
+            }
             None => {
                 execution.input_arrays = Some(vec![input]);
             }
         };
+
         Ok(())
     }
 
@@ -185,7 +189,6 @@ impl WasiEphemeralNn for WasiNnCtx {
                 return Err(WasiNnError::RuntimeError);
             }
         };
-        log::info!("wasi_nn_onnx::set_input: execution: {:#?}", execution);
 
         let output_arrays = match execution.output_arrays {
             Some(ref oa) => oa,
@@ -239,16 +242,26 @@ impl WasiEphemeralNn for WasiNnCtx {
         let output_arrays: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>> =
             execution.session.run(input_arrays)?;
 
+        log::info!(
+            "wasi_nn_onnx::compute: output arrays contains {} elements",
+            output_arrays.len()
+        );
+
+        log::info!(
+            "wasi_nn_onnx::compute: dimensions of first output tensor: {:#?}",
+            output_arrays.get(0).unwrap().dim()
+        );
+
         match execution.output_arrays {
             Some(_) => {
-                log::error!("wasi_nn_onnx::compute: ");
+                log::error!("wasi_nn_onnx::compute: existing data in output_arrays, aborting");
                 return Err(WasiNnError::RuntimeError);
             }
             None => {
                 execution.output_arrays = Some(vec_from_out_tensors(output_arrays, outputs));
             }
         };
-        todo!()
+        Ok(())
     }
 }
 
