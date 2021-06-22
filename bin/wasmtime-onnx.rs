@@ -1,4 +1,4 @@
-use anyhow::{bail, Error};
+use anyhow::{bail, Context, Error};
 use structopt::StructOpt;
 use wasi_cap_std_sync::WasiCtxBuilder;
 use wasi_nn_onnx_wasmtime::ctx::WasiNnCtx;
@@ -28,6 +28,14 @@ struct Opt {
     )]
     vars: Vec<(String, String)>,
 
+    /// Grant access to the given host directory
+    #[structopt(long = "dir", number_of_values = 1, value_name = "DIRECTORY")]
+    dirs: Vec<String>,
+
+    /// Grant access to a guest directory mapped as a host directory
+    #[structopt(long = "mapdir", number_of_values = 1, value_name = "GUEST_DIR::HOST_DIR", parse(try_from_str = parse_map_dirs))]
+    map_dirs: Vec<(String, String)>,
+
     #[structopt(value_name = "ARGS", help = "The arguments to pass to the module")]
     module_args: Vec<String>,
 }
@@ -38,8 +46,10 @@ async fn main() -> Result<(), Error> {
 
     let opt = Opt::from_args();
     let method = opt.invoke.clone();
-    // println!("{:?}", opt);
-    let (instance, mut store) = create_instance(opt.module, opt.vars)?;
+
+    let dirs = compute_preopen_dirs(opt.dirs, opt.map_dirs)?;
+
+    let (instance, mut store) = create_instance(opt.module, opt.vars, dirs)?;
     let func = instance
         .get_func(&mut store, method.as_str())
         .unwrap_or_else(|| panic!("cannot find function {}", method));
@@ -52,13 +62,14 @@ async fn main() -> Result<(), Error> {
 fn create_instance(
     filename: String,
     vars: Vec<(String, String)>,
+    preopen_dirs: Vec<(String, Dir)>,
 ) -> Result<(Instance, Store<Ctx>), Error> {
     let engine = Engine::default();
     let mut store = Store::new(&engine, Ctx::default());
     let mut linker = Linker::new(&engine);
     linker.allow_unknown_exports(true);
 
-    populate_with_wasi(&mut store, &mut linker, vars)?;
+    populate_with_wasi(&mut store, &mut linker, vars, preopen_dirs)?;
 
     let module = Module::from_file(linker.engine(), filename)?;
     let instance = linker.instantiate(&mut store, &module)?;
@@ -70,22 +81,50 @@ fn populate_with_wasi(
     store: &mut Store<Ctx>,
     linker: &mut Linker<Ctx>,
     vars: Vec<(String, String)>,
+    preopen_dirs: Vec<(String, Dir)>,
 ) -> Result<(), Error> {
     wasmtime_wasi::add_to_linker(linker, |host| host.wasi_ctx.as_mut().unwrap())?;
 
-    store.data_mut().wasi_ctx = Some(
-        WasiCtxBuilder::new()
-            .inherit_stdin()
-            .inherit_stdout()
-            .inherit_stderr()
-            .envs(&vars)?
-            .build(),
-    );
+    let mut builder = WasiCtxBuilder::new()
+        .inherit_stdin()
+        .inherit_stdout()
+        .inherit_stderr()
+        .envs(&vars)?;
+
+    for (name, dir) in preopen_dirs.into_iter() {
+        builder = builder.preopened_dir(dir, name)?;
+    }
+    store.data_mut().wasi_ctx = Some(builder.build());
 
     wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
     store.data_mut().nn_ctx = Some(WasiNnCtx::new()?);
 
     Ok(())
+}
+
+fn compute_preopen_dirs(
+    dirs: Vec<String>,
+    map_dirs: Vec<(String, String)>,
+) -> Result<Vec<(String, Dir)>, Error> {
+    let mut preopen_dirs = Vec::new();
+
+    for dir in dirs.iter() {
+        preopen_dirs.push((
+            dir.clone(),
+            unsafe { Dir::open_ambient_dir(dir) }
+                .with_context(|| format!("failed to open directory '{}'", dir))?,
+        ));
+    }
+
+    for (guest, host) in map_dirs.iter() {
+        preopen_dirs.push((
+            guest.clone(),
+            unsafe { Dir::open_ambient_dir(host) }
+                .with_context(|| format!("failed to open directory '{}'", host))?,
+        ));
+    }
+
+    Ok(preopen_dirs)
 }
 
 // Invoke function given module arguments and print results.
@@ -133,6 +172,14 @@ fn parse_env_var(s: &str) -> Result<(String, String), Error> {
         bail!("must be of the form `key=value`");
     }
     Ok((parts[0].to_owned(), parts[1].to_owned()))
+}
+
+fn parse_map_dirs(s: &str) -> Result<(String, String), Error> {
+    let parts: Vec<&str> = s.split("::").collect();
+    if parts.len() != 2 {
+        bail!("must contain exactly one double colon ('::')");
+    }
+    Ok((parts[0].into(), parts[1].into()))
 }
 
 #[derive(Default)]
