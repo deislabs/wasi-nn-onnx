@@ -193,7 +193,7 @@ impl WasiEphemeralNn for WasiNnCtx {
         let output_arrays = match execution.output_arrays {
             Some(ref oa) => oa,
             None => {
-                log::error!("wasi_nn_onnx::get_output: output_arrays for session is none");
+                log::error!("wasi_nn_onnx::get_output: output_arrays for session is none. Perhaps you haven't called compute yet?");
                 return Err(WasiNnError::RuntimeError);
             }
         };
@@ -236,6 +236,11 @@ impl WasiEphemeralNn for WasiNnCtx {
             .as_ref()
             .unwrap_or(&vec![])
             .clone();
+
+        log::info!(
+            "wasi_nn_onnx::compute: input arrays contains {} elements",
+            input_arrays.len()
+        );
 
         let outputs: Vec<Output> = execution.session.outputs.clone();
 
@@ -280,6 +285,11 @@ fn vec_from_out_tensors(
             .map(|d| d.unwrap())
             .collect::<Vec<usize>>();
 
+        log::info!(
+            "wasi_nn_onnx::vec_from_out_tensors: output array shape:  {:#?}",
+            shape
+        );
+
         let array = Array::from_shape_vec(
             shape,
             arrays.get(index).unwrap().as_slice().unwrap().to_vec(),
@@ -305,6 +315,12 @@ fn bytes_to_f32_vec(data: Vec<u8>) -> Vec<f32> {
 }
 
 fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
+    let sum: f32 = data.iter().sum();
+    log::info!(
+        "wasi_nn_onnx: f32_vec_to_bytes: flatten output tensor contains {} elements with sum {}",
+        data.len(),
+        sum
+    );
     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
     let mut result: Vec<u8> = Vec::new();
 
@@ -315,6 +331,10 @@ fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
             result.push(*u);
         }
     }
+    log::info!(
+        "wasi_nn_onnx: f32_vec_to_bytes: flatten byte output tensor contains {} elements",
+        result.len()
+    );
     result
 }
 
