@@ -5,7 +5,6 @@ const RUST_EXAMPLE: &str = "rust";
 // const AS_EXAMPLE: &str = "as";
 
 fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=tests/rust/src/main.rs");
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/lib.rs");
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/wasi_nn_onnx.rs");

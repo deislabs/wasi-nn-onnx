@@ -16,7 +16,7 @@ mod tests {
     fn rust_tests() {
         init();
         run_tests(
-            "target/wasm32-wasi/release/rust.wasm",
+            "target/wasm32-wasi/release/wasi-nn-rust.wasm",
             vec![
                 "load_empty",
                 "load_model",
@@ -24,6 +24,7 @@ mod tests {
                 "set_input",
                 "compute",
                 "get_output",
+                "batch",
             ],
         )
         .unwrap();

@@ -1688,18 +1688,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "env_logger 0.8.4",
- "image",
- "log",
- "ndarray",
- "wasi-nn",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2463,6 +2451,19 @@ dependencies = [
  "wasmtime-runtime",
  "wasmtime-wasi",
  "wiggle",
+]
+
+[[package]]
+name = "wasi-nn-rust"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "env_logger 0.8.4",
+ "image",
+ "log",
+ "ndarray",
+ "wasi-nn",
 ]
 
 [[package]]
