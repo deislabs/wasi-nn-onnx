@@ -14,6 +14,6 @@ jobs:
         with:
           submodules: true
       - name: Build
-        run: rustup target add wasm32-wasi && cargo build --verbose
+        run: rustup target add wasm32-wasi && cargo build
       - name: Run simple test
-        run: RUST_LOG=wasi_nn_onnx_wasmtime=info cargo test --all -- --nocapture
+        run: RUST_LOG=wasi_nn_onnx_wasmtime=info,integration=info cargo test --all -- --nocapture

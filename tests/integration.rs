@@ -21,10 +21,17 @@ mod tests {
         let _ = env_logger::builder().is_test(true).try_init();
     }
 
-    fn run_tests<S: Into<String> + AsRef<Path>>(filename: S, funcs: Vec<S>) -> Result<(), Error> {
-        let (instance, mut store) = create_instance(filename)?;
-
+    fn run_tests<S: Into<String> + AsRef<Path> + Clone>(
+        filename: S,
+        funcs: Vec<S>,
+    ) -> Result<(), Error> {
+        let (instance, mut store) = create_instance(filename.clone())?;
         for f in funcs {
+            log::info!(
+                "executing {} for module {}",
+                f.clone().into(),
+                filename.clone().into()
+            );
             let func = instance
                 .get_func(&mut store, f.into().as_str())
                 .unwrap_or_else(|| panic!("cannot find function"));
