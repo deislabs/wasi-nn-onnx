@@ -1,8 +1,10 @@
+use std::time::Instant;
+
 use anyhow::{bail, Context, Error};
 use structopt::StructOpt;
 use wasi_cap_std_sync::WasiCtxBuilder;
 use wasi_nn_onnx_wasmtime::ctx::WasiNnCtx;
-use wasmtime::{AsContextMut, Engine, Func, Instance, Linker, Module, Store, Val, ValType};
+use wasmtime::{AsContextMut, Config, Engine, Func, Instance, Linker, Module, Store, Val, ValType};
 use wasmtime_wasi::*;
 
 #[derive(Debug, StructOpt)]
@@ -18,6 +20,9 @@ struct Opt {
         help = "The name of the function to run"
     )]
     invoke: String,
+
+    #[structopt(short = "c", long = "cache", help = "Path to cache config file")]
+    cache: Option<String>,
 
     #[structopt(
         short = "e",
@@ -49,13 +54,16 @@ async fn main() -> Result<(), Error> {
 
     let dirs = compute_preopen_dirs(opt.dirs, opt.map_dirs)?;
 
-    let (instance, mut store) = create_instance(opt.module, opt.vars, dirs)?;
+    let start = Instant::now();
+
+    let (instance, mut store) = create_instance(opt.module, opt.vars, dirs, opt.cache)?;
     let func = instance
         .get_func(&mut store, method.as_str())
         .unwrap_or_else(|| panic!("cannot find function {}", method));
 
     invoke_func(func, opt.module_args, &mut store)?;
-
+    let duration = start.elapsed();
+    log::info!("execution time: {:#?}", duration);
     Ok(())
 }
 
@@ -63,8 +71,15 @@ fn create_instance(
     filename: String,
     vars: Vec<(String, String)>,
     preopen_dirs: Vec<(String, Dir)>,
+    cache_config: Option<String>,
 ) -> Result<(Instance, Store<Ctx>), Error> {
-    let engine = Engine::default();
+    let mut config = Config::default();
+    if let Some(c) = cache_config {
+        if let Ok(p) = std::fs::canonicalize(c) {
+            config.cache_config_load(p)?;
+        };
+    };
+    let engine = Engine::new(&config)?;
     let mut store = Store::new(&engine, Ctx::default());
     let mut linker = Linker::new(&engine);
     linker.allow_unknown_exports(true);
