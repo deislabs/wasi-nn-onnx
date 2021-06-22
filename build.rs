@@ -14,7 +14,7 @@ fn main() {
     println!("cargo:rustc-link-search=native=./target");
     println!("cargo:rustc-link-lib=onnxruntime");
 
-    // cargo_build_example(TESTS_DIR, RUST_EXAMPLE);
+    cargo_build_example(TESTS_DIR, RUST_EXAMPLE);
 }
 fn cargo_build_example(dir: &str, example: &str) {
     let dir = format!("{}/{}", dir, example);
