@@ -3,12 +3,15 @@ use ndarray::Array;
 use std::{
     fmt::Debug,
     io::{self, BufRead, BufReader},
+    path::PathBuf,
 };
-use wasi_nn_rust::{bytes_to_f32_vec, f32_vec_to_bytes, image_to_tensor, NdArrayTensor};
+use wasi_nn_rust::{
+    assert_inferred_class, bytes_to_f32_vec, f32_vec_to_bytes, image_to_tensor, NdArrayTensor,
+};
 
 const MODEL_PATH: &str = "tests/testdata/models/squeezenet1.1-7.onnx";
 const LABELS_PATH: &str = "tests/testdata/models/squeezenet_labels.txt";
-const IMG_PATH: &str = "tests/testdata/images/Grace_Hopper.jpg";
+const IMG_PATH: &str = "tests/testdata/images/n04350905.jpg";
 const IMG_DIR: &str = "tests/testdata/images/";
 
 fn main() {}
@@ -197,7 +200,10 @@ fn run_batch<S: Into<String> + AsRef<std::path::Path> + Copy>(
 fn inference_image<S: Into<String> + AsRef<std::path::Path> + Clone + Debug>(
     model: S,
     img: S,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    PathBuf: From<S>,
+{
     let model = std::fs::read(model).unwrap();
     println!(
         "integration::inference_image: loaded module {}  with size {} bytes",
@@ -259,6 +265,8 @@ fn inference_image<S: Into<String> + AsRef<std::path::Path> + Clone + Debug>(
             labels[probabilities[i].0], probabilities[i].0, probabilities[i].1
         );
     }
+    assert_inferred_class(img.into(), &labels[probabilities[0].0]);
+
     println!("\n");
 
     Ok(())

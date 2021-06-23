@@ -57,6 +57,12 @@ impl From<ShapeError> for WasiNnError {
     }
 }
 
+impl From<std::io::Error> for WasiNnError {
+    fn from(_: std::io::Error) -> Self {
+        WasiNnError::RuntimeError
+    }
+}
+
 pub(crate) type WasiNnResult<T> = Result<T, WasiNnError>;
 
 pub struct WasiNnCtx {
