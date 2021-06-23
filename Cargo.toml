@@ -18,13 +18,13 @@ wasi-cap-std-sync = "0.28"
 wasi-experimental-http-wasmtime = "0.5"
 wasi-nn-onnx-wasmtime = { path = "./crates/wasi-nn-onnx-wasmtime" }
 
-[[bin]]
-name = "wasmtime-onnx"
-path = "bin/wasmtime-onnx.rs"
-
 [workspace]
 members = [
     "crates/wasi-nn-onnx-wasmtime",
     "crates/wasi-nn/rust",
     "tests/rust"
 ]
+
+[[bin]]
+name = "wasmtime-onnx"
+path = "bin/wasmtime-onnx.rs"

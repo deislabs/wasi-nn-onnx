@@ -3,7 +3,7 @@ use std::time::Instant;
 use anyhow::{bail, Context, Error};
 use structopt::StructOpt;
 use wasi_cap_std_sync::WasiCtxBuilder;
-use wasi_nn_onnx_wasmtime::ctx::WasiNnCtx;
+use wasi_nn_onnx_wasmtime::WasiNnCtx;
 use wasmtime::{AsContextMut, Config, Engine, Func, Instance, Linker, Module, Store, Val, ValType};
 use wasmtime_wasi::*;
 
@@ -112,7 +112,7 @@ fn populate_with_wasi(
     store.data_mut().wasi_ctx = Some(builder.build());
 
     wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
-    store.data_mut().nn_ctx = Some(WasiNnCtx::new()?);
+    store.data_mut().nn_ctx = Some(WasiNnCtx::default());
 
     Ok(())
 }

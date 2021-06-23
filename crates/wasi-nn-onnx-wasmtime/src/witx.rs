@@ -1,4 +1,4 @@
-use crate::ctx::{WasiNnCtx, WasiNnError};
+use crate::{onnx_runtime::WasiNnCtx, WasiNnError};
 use std::cmp::Ordering;
 use types::{Graph, GraphExecutionContext, NnErrno, UserErrorConversion};
 use wiggle::GuestErrorType;
