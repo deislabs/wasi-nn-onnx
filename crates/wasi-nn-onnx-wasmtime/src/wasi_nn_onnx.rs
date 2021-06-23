@@ -151,7 +151,7 @@ impl WasiEphemeralNn for WasiNnCtx {
         // TODO
         // - [ ] check that the expected and actual shapes are equal
         // - [ ] match on the tensor data type and coerce input to right type
-        let data = bytes_to_f32_vec(tensor.data.as_slice()?.to_vec());
+        let data = bytes_to_f32_vec(tensor.data.as_slice()?.to_vec())?;
         let input = Array::from_shape_vec(input, data)?;
 
         match execution.input_arrays {
@@ -263,19 +263,17 @@ impl WasiEphemeralNn for WasiNnCtx {
                 return Err(WasiNnError::RuntimeError);
             }
             None => {
-                execution.output_arrays = Some(vec_from_out_tensors(output_arrays, outputs));
+                execution.output_arrays = Some(vec_from_out_tensors(output_arrays, outputs)?);
             }
         };
         Ok(())
     }
 }
 
-// TODO
-// remove hardcoded f32
 fn vec_from_out_tensors(
     arrays: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>>,
     outputs: Vec<Output>,
-) -> Vec<Array<f32, Dim<IxDynImpl>>> {
+) -> Result<Vec<Array<f32, Dim<IxDynImpl>>>> {
     let mut res = Vec::new();
     for index in 0..arrays.len() {
         let shape = outputs
@@ -293,25 +291,24 @@ fn vec_from_out_tensors(
         let array = Array::from_shape_vec(
             shape,
             arrays.get(index).unwrap().as_slice().unwrap().to_vec(),
-        )
-        .unwrap();
+        )?;
         res.push(array);
     }
 
-    res
+    Ok(res)
 }
 
-// TODO
-// remove the unwrap in map and test.
-fn bytes_to_f32_vec(data: Vec<u8>) -> Vec<f32> {
+fn bytes_to_f32_vec(data: Vec<u8>) -> Result<Vec<f32>> {
     let chunks: Vec<&[u8]> = data.chunks(4).collect();
-    chunks
+    let v: Vec<Result<f32>> = chunks
         .into_iter()
         .map(|c| {
             let mut rdr = Cursor::new(c);
-            rdr.read_f32::<LittleEndian>().unwrap()
+            Ok(rdr.read_f32::<LittleEndian>()?)
         })
-        .collect()
+        .collect();
+
+    v.into_iter().collect()
 }
 
 fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
@@ -322,15 +319,8 @@ fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
         sum
     );
     let chunks: Vec<[u8; 4]> = data.into_iter().map(|f| f.to_le_bytes()).collect();
-    let mut result: Vec<u8> = Vec::new();
+    let result: Vec<u8> = chunks.iter().flatten().copied().collect();
 
-    // TODO
-    // simplify this to potentially a single map.
-    for c in chunks {
-        for u in c.iter() {
-            result.push(*u);
-        }
-    }
     log::info!(
         "wasi_nn_onnx: f32_vec_to_bytes: flatten byte output tensor contains {} elements",
         result.len()
@@ -342,14 +332,14 @@ fn f32_vec_to_bytes(data: Vec<f32>) -> Vec<u8> {
 fn test_f32_bytes_array_and_back() {
     let case = vec![0.0_f32, 1.1, 2.2, 3.3];
     let bytes = f32_vec_to_bytes(case.clone());
-    let res = bytes_to_f32_vec(bytes);
+    let res = bytes_to_f32_vec(bytes).unwrap();
     assert_eq!(case, res);
 }
 
 #[test]
 fn test_bytes_array_to_f32_array() {
     let bytes = vec![0x00, 0x00, 0x48, 0x41, 0x00, 0x00, 0x48, 0x41];
-    let res = bytes_to_f32_vec(bytes);
+    let res = bytes_to_f32_vec(bytes).unwrap();
     assert!((12.5 - res[0]).abs() < f32::EPSILON);
     assert!((12.5 - res[1]).abs() < f32::EPSILON);
 }
