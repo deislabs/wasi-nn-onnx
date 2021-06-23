@@ -8,7 +8,7 @@ use wasmtime::{AsContextMut, Config, Engine, Func, Instance, Linker, Module, Sto
 use wasmtime_wasi::*;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "wasmtime-http")]
+#[structopt(name = "wasmtime-onnx")]
 struct Opt {
     #[structopt(help = "The path of the WebAssembly module to run")]
     module: String,

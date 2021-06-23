@@ -2410,15 +2410,10 @@ name = "wasi-nn-onnx-sample"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "byteorder",
  "env_logger 0.8.4",
- "futures",
- "http",
  "log",
  "structopt",
- "thiserror",
  "tokio",
- "tracing",
  "wasi-cap-std-sync",
  "wasi-common",
  "wasi-experimental-http-wasmtime",
@@ -2426,7 +2421,6 @@ dependencies = [
  "wasmtime",
  "wasmtime-runtime",
  "wasmtime-wasi",
- "wiggle",
 ]
 
 [[package]]
@@ -2435,16 +2429,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "byteorder",
- "env_logger 0.8.4",
- "futures",
- "http",
  "log",
  "onnxruntime",
- "reqwest",
- "structopt",
  "thiserror",
- "tokio",
- "tracing",
  "wasi-cap-std-sync",
  "wasi-common",
  "wasmtime",
