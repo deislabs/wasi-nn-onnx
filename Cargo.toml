@@ -6,15 +6,10 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.4"
-futures = "0.3"
-http = "0.2"
 log = { version = "0.4", default-features = false }
 env_logger = "0.8"
 structopt = "0.3.21"
-thiserror = "1.0"
 tokio = { version = "1.4.0", features = ["full"] }
-tracing = "0.1"
 wasmtime = "0.28"
 wasmtime-runtime = "0.28"
 wasmtime-wasi = "0.28"
@@ -22,11 +17,6 @@ wasi-common = "0.28"
 wasi-cap-std-sync = "0.28"
 wasi-experimental-http-wasmtime = "0.5"
 wasi-nn-onnx-wasmtime = { path = "./crates/wasi-nn-onnx-wasmtime" }
-wiggle =  "0.28"
-
-[[bin]]
-name = "wasmtime-onnx"
-path = "bin/wasmtime-onnx.rs"
 
 [workspace]
 members = [
@@ -34,3 +24,7 @@ members = [
     "crates/wasi-nn/rust",
     "tests/rust"
 ]
+
+[[bin]]
+name = "wasmtime-onnx"
+path = "bin/wasmtime-onnx.rs"

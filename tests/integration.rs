@@ -8,7 +8,7 @@ mod tests {
     use crate::Ctx;
     use anyhow::{Context, Error};
     use wasi_cap_std_sync::Dir;
-    use wasi_nn_onnx_wasmtime::ctx::WasiNnCtx;
+    use wasi_nn_onnx_wasmtime::WasiNnCtx;
     use wasmtime::*;
     use wasmtime_wasi::sync::WasiCtxBuilder;
 
@@ -93,7 +93,7 @@ mod tests {
         store.data_mut().wasi_ctx = Some(builder.build());
 
         wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
-        store.data_mut().nn_ctx = Some(WasiNnCtx::new()?);
+        store.data_mut().nn_ctx = Some(WasiNnCtx::default());
 
         Ok(())
     }
