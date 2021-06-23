@@ -117,7 +117,7 @@ pub fn assert_inferred_class(img: String, exp: &String) {
 #[test]
 fn test_class_from_path() {
     assert_inferred_class(
-        "n04350905 suit, suit of clothes".to_string(),
-        &"tests/testdata/images/n04350905.jpg".to_string(),
+        "tests/testdata/images/n04350905.jpg".to_string(),
+        &"n04350905 suit, suit of clothes".to_string(),
     );
 }
