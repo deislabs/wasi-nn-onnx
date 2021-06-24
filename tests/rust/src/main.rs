@@ -173,7 +173,8 @@ fn compute() {
 
 #[no_mangle]
 fn get_output() {
-    inference_image(MODEL_PATH, IMG_PATH).unwrap();
+    let model = std::fs::read(MODEL_PATH).unwrap();
+    inference_image(model, IMG_PATH).unwrap();
 }
 
 #[no_mangle]
@@ -190,21 +191,22 @@ fn run_batch<S: Into<String> + AsRef<std::path::Path> + Copy>(
         .collect::<Result<Vec<_>, io::Error>>()?;
     entries.sort();
 
+    let model = std::fs::read(model).unwrap();
+
     for path in entries.iter() {
-        inference_image::<String>(model.into(), path.to_string_lossy().to_string())?;
+        inference_image::<String>(model.clone(), path.to_string_lossy().to_string())?;
     }
 
     Ok(())
 }
 
 fn inference_image<S: Into<String> + AsRef<std::path::Path> + Clone + Debug>(
-    model: S,
+    model: Vec<u8>,
     img: S,
 ) -> Result<(), Error>
 where
     PathBuf: From<S>,
 {
-    let model = std::fs::read(model).unwrap();
     println!(
         "integration::inference_image: loaded module {}  with size {} bytes",
         MODEL_PATH,

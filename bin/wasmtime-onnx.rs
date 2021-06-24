@@ -87,6 +87,8 @@ fn create_instance(
     cache_config: Option<String>,
     runtime: Runtime,
 ) -> Result<(Instance, Store<Ctx>), Error> {
+    let start = Instant::now();
+
     let mut config = Config::default();
     if let Some(c) = cache_config {
         if let Ok(p) = std::fs::canonicalize(c) {
@@ -102,7 +104,12 @@ fn create_instance(
 
     let module = Module::from_file(linker.engine(), filename)?;
     let instance = linker.instantiate(&mut store, &module)?;
-
+    let duration = start.elapsed();
+    log::info!(
+        "instantiation time: {:#?} with runtime: {:#?}",
+        duration,
+        runtime
+    );
     Ok((instance, store))
 }
 
