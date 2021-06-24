@@ -2,3 +2,5 @@
 build
 cache.toml
 cache/
+target/
+workspace.code-workspace

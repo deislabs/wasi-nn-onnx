@@ -8,11 +8,21 @@ edition = "2018"
 anyhow = "1.0"
 byteorder = "1.4"
 log = { version = "0.4", default-features = false }
-onnxruntime = { git = "https://github.com/radu-matei/onnxruntime-rs", branch = "owned-session" }
+ndarray = "0.15"
+onnxruntime = { git = "https://github.com/radu-matei/onnxruntime-rs", branch = "owned-session", optional = true }
 thiserror = "1.0"
+tract-data = "0.14"
+tract-linalg = "0.14"
+tract-onnx = { version = "0.14", optional = true }
 wasmtime = "0.28"
 wasmtime-runtime = "0.28"
 wasmtime-wasi = "0.28"
 wasi-common = "0.28"
 wasi-cap-std-sync = "0.28"
 wiggle =  "0.28"
+
+[features]
+default = ["c_onnxruntime", "tract"]
+
+c_onnxruntime = ["onnxruntime"]
+tract = ["tract-onnx"]

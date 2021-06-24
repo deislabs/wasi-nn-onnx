@@ -16,15 +16,20 @@ wasmtime-wasi = "0.28"
 wasi-common = "0.28"
 wasi-cap-std-sync = "0.28"
 wasi-experimental-http-wasmtime = "0.5"
-wasi-nn-onnx-wasmtime = { path = "./crates/wasi-nn-onnx-wasmtime" }
+wasi-nn-onnx-wasmtime = { path = "./crates/wasi-nn-onnx-wasmtime", default-features = true }
 
 [workspace]
 members = [
     "crates/wasi-nn-onnx-wasmtime",
     "crates/wasi-nn/rust",
-    "tests/rust"
+    # "tests/rust"
 ]
+exclude = ["tests/rust"]
 
 [[bin]]
 name = "wasmtime-onnx"
 path = "bin/wasmtime-onnx.rs"
+
+[features]
+c_onnxruntime = ["wasi-nn-onnx-wasmtime/c_onnxruntime"]
+tract = ["wasi-nn-onnx-wasmtime/tract"]
