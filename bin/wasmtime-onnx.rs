@@ -3,7 +3,7 @@ use std::time::Instant;
 use anyhow::{bail, Context, Error};
 use structopt::StructOpt;
 use wasi_cap_std_sync::WasiCtxBuilder;
-use wasi_nn_onnx_wasmtime::WasiNnCtx;
+use wasi_nn_onnx_wasmtime::{WasiNnOnnxCtx, WasiNnTractCtx};
 use wasmtime::{AsContextMut, Config, Engine, Func, Instance, Linker, Module, Store, Val, ValType};
 use wasmtime_wasi::*;
 
@@ -33,11 +33,15 @@ struct Opt {
     )]
     vars: Vec<(String, String)>,
 
-    /// Grant access to the given host directory
+    #[structopt(
+        long = "tract",
+        help = "If enabled, the inference will be executed using the Tract ONNX runtime"
+    )]
+    use_tract: bool,
+
     #[structopt(long = "dir", number_of_values = 1, value_name = "DIRECTORY")]
     dirs: Vec<String>,
 
-    /// Grant access to a guest directory mapped as a host directory
     #[structopt(long = "mapdir", number_of_values = 1, value_name = "GUEST_DIR::HOST_DIR", parse(try_from_str = parse_map_dirs))]
     map_dirs: Vec<(String, String)>,
 
@@ -54,16 +58,25 @@ async fn main() -> Result<(), Error> {
 
     let dirs = compute_preopen_dirs(opt.dirs, opt.map_dirs)?;
 
+    let runtime = match opt.use_tract {
+        true => Runtime::Tract,
+        false => Runtime::C,
+    };
+
     let start = Instant::now();
 
-    let (instance, mut store) = create_instance(opt.module, opt.vars, dirs, opt.cache)?;
+    let (instance, mut store) = create_instance(opt.module, opt.vars, dirs, opt.cache, runtime)?;
     let func = instance
         .get_func(&mut store, method.as_str())
         .unwrap_or_else(|| panic!("cannot find function {}", method));
 
     invoke_func(func, opt.module_args, &mut store)?;
     let duration = start.elapsed();
-    log::info!("execution time: {:#?}", duration);
+    log::info!(
+        "execution time: {:#?} with runtime: {:#?}",
+        duration,
+        runtime
+    );
     Ok(())
 }
 
@@ -72,6 +85,7 @@ fn create_instance(
     vars: Vec<(String, String)>,
     preopen_dirs: Vec<(String, Dir)>,
     cache_config: Option<String>,
+    runtime: Runtime,
 ) -> Result<(Instance, Store<Ctx>), Error> {
     let mut config = Config::default();
     if let Some(c) = cache_config {
@@ -84,7 +98,7 @@ fn create_instance(
     let mut linker = Linker::new(&engine);
     linker.allow_unknown_exports(true);
 
-    populate_with_wasi(&mut store, &mut linker, vars, preopen_dirs)?;
+    populate_with_wasi(&mut store, &mut linker, vars, preopen_dirs, runtime)?;
 
     let module = Module::from_file(linker.engine(), filename)?;
     let instance = linker.instantiate(&mut store, &module)?;
@@ -97,6 +111,7 @@ fn populate_with_wasi(
     linker: &mut Linker<Ctx>,
     vars: Vec<(String, String)>,
     preopen_dirs: Vec<(String, Dir)>,
+    runtime: Runtime,
 ) -> Result<(), Error> {
     wasmtime_wasi::add_to_linker(linker, |host| host.wasi_ctx.as_mut().unwrap())?;
 
@@ -111,8 +126,16 @@ fn populate_with_wasi(
     }
     store.data_mut().wasi_ctx = Some(builder.build());
 
-    wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
-    store.data_mut().nn_ctx = Some(WasiNnCtx::default());
+    match runtime {
+        Runtime::C => {
+            wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
+            store.data_mut().nn_ctx = Some(WasiNnOnnxCtx::default());
+        }
+        Runtime::Tract => {
+            wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.tract_ctx.as_mut().unwrap())?;
+            store.data_mut().tract_ctx = Some(WasiNnTractCtx::default());
+        }
+    };
 
     Ok(())
 }
@@ -200,5 +223,12 @@ fn parse_map_dirs(s: &str) -> Result<(String, String), Error> {
 #[derive(Default)]
 struct Ctx {
     pub wasi_ctx: Option<WasiCtx>,
-    pub nn_ctx: Option<WasiNnCtx>,
+    pub nn_ctx: Option<WasiNnOnnxCtx>,
+    pub tract_ctx: Option<WasiNnTractCtx>,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum Runtime {
+    C,
+    Tract,
 }

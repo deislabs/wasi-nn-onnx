@@ -1,4 +1,6 @@
-use crate::{onnx_runtime::WasiNnCtx, WasiNnError};
+use crate::onnx_runtime::WasiNnOnnxCtx;
+use crate::tract::WasiNnTractCtx;
+use crate::WasiNnError;
 use std::cmp::Ordering;
 use types::{Graph, GraphExecutionContext, NnErrno, UserErrorConversion};
 use wiggle::GuestErrorType;
@@ -8,7 +10,19 @@ wiggle::from_witx!({
     errors: { nn_errno => WasiNnError }
 });
 
-impl<'a> UserErrorConversion for WasiNnCtx {
+impl<'a> UserErrorConversion for WasiNnTractCtx {
+    fn nn_errno_from_wasi_nn_error(&mut self, e: WasiNnError) -> Result<NnErrno, wiggle::Trap> {
+        eprintln!("Host error: {:?}", e);
+        match e {
+            WasiNnError::GuestError(_) => unimplemented!(),
+            WasiNnError::RuntimeError => unimplemented!(),
+            WasiNnError::OnnxError => unimplemented!(),
+            WasiNnError::InvalidEncodingError => unimplemented!(),
+        }
+    }
+}
+
+impl<'a> UserErrorConversion for WasiNnOnnxCtx {
     fn nn_errno_from_wasi_nn_error(&mut self, e: WasiNnError) -> Result<NnErrno, wiggle::Trap> {
         eprintln!("Host error: {:?}", e);
         match e {
