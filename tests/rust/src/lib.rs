@@ -99,7 +99,7 @@ pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
     Ok(f32_vec_to_bytes(array.as_slice().unwrap().to_vec()))
 }
 
-pub fn assert_inferred_class(img: String, exp: &str) {
+pub fn assert_contains_class(img: String, labels: Vec<String>) {
     let class = std::path::PathBuf::from(img);
     let class = class
         .file_name()
@@ -109,9 +109,11 @@ pub fn assert_inferred_class(img: String, exp: &str) {
         .collect::<Vec<&str>>()[0]
         .to_string();
 
-    let exp = exp.split(' ').collect::<Vec<&str>>()[0].to_string();
-
-    assert_eq!(class, exp);
+    let labels: Vec<String> = labels
+        .into_iter()
+        .map(|s| s.split(' ').collect::<Vec<&str>>()[0].to_string())
+        .collect();
+    assert_eq!(true, labels.contains(&class));
 }
 
 #[test]
