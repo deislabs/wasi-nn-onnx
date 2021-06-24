@@ -20,42 +20,27 @@ mod tests {
         Tract,
     }
 
+    const RUST_WASM_TEST: &str = "tests/rust/target/wasm32-wasi/release/wasi-nn-rust.wasm";
+    const SQUEEZENET_TESTS: [&str; 7] = [
+        "load_empty",
+        "load_model",
+        "init_execution_context",
+        "set_input",
+        "compute",
+        "get_output",
+        "batch",
+    ];
+
     #[test]
     fn test_c_api() {
         init();
-        run_tests(
-            "target/wasm32-wasi/release/wasi-nn-rust.wasm",
-            vec![
-                "load_empty",
-                "load_model",
-                "init_execution_context",
-                "set_input",
-                "compute",
-                "get_output",
-                "batch",
-            ],
-            Runtime::C,
-        )
-        .unwrap();
+        run_tests(RUST_WASM_TEST, SQUEEZENET_TESTS.to_vec(), Runtime::C).unwrap();
     }
 
     #[test]
     fn test_tract() {
         init();
-        run_tests(
-            "target/wasm32-wasi/release/wasi-nn-rust.wasm",
-            vec![
-                "load_empty",
-                "load_model",
-                "init_execution_context",
-                "set_input",
-                "compute",
-                "get_output",
-                "batch",
-            ],
-            Runtime::Tract,
-        )
-        .unwrap();
+        run_tests(RUST_WASM_TEST, SQUEEZENET_TESTS.to_vec(), Runtime::Tract).unwrap();
     }
 
     fn init() {
