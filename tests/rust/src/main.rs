@@ -6,10 +6,11 @@ use std::{
     path::PathBuf,
 };
 use wasi_nn_rust::{
-    assert_inferred_class, bytes_to_f32_vec, f32_vec_to_bytes, image_to_tensor, NdArrayTensor,
+    assert_contains_class, bytes_to_f32_vec, f32_vec_to_bytes, image_to_tensor, NdArrayTensor,
 };
 
-const MODEL_PATH: &str = "tests/testdata/models/squeezenet1.1-7.onnx";
+const SQUEEZENET_PATH: &str = "tests/testdata/models/squeezenet1.1-7.onnx";
+const MOBILENETV2_PATH: &str = "tests/testdata/models/mobilenetv2-7.onnx";
 const LABELS_PATH: &str = "tests/testdata/models/squeezenet_labels.txt";
 const IMG_PATH: &str = "tests/testdata/images/n04350905.jpg";
 const IMG_DIR: &str = "tests/testdata/images/";
@@ -20,7 +21,7 @@ fn main() {}
 fn load_simple_tensor() {
     // the model is not important here, we just want to make sure
     // the input tensor is reconstructed properly on the runtime.
-    let model = std::fs::read(MODEL_PATH).unwrap();
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
 
     let g = unsafe {
         wasi_nn::load(
@@ -70,7 +71,7 @@ fn load_empty() {
 
 #[no_mangle]
 fn load_model() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
     println!("integration::load_model: loaded {} bytes", model.len());
     let _ = unsafe {
         wasi_nn::load(
@@ -84,7 +85,7 @@ fn load_model() {
 
 #[no_mangle]
 fn init_execution_context() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
     println!(
         "integration::init_execution_context: loaded {} bytes",
         model.len()
@@ -107,7 +108,7 @@ fn init_execution_context() {
 
 #[no_mangle]
 fn set_input() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
     println!("integration::set_input: loaded {} bytes", model.len());
     let g = unsafe {
         wasi_nn::load(
@@ -138,7 +139,7 @@ fn set_input() {
 
 #[no_mangle]
 fn compute() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
     println!("integration::compute: loaded {} bytes", model.len());
     let g = unsafe {
         wasi_nn::load(
@@ -172,14 +173,14 @@ fn compute() {
 }
 
 #[no_mangle]
-fn get_output() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
+fn test_squeezenet() {
+    let model = std::fs::read(SQUEEZENET_PATH).unwrap();
     inference_image(model, IMG_PATH).unwrap();
 }
 
 #[no_mangle]
-fn batch() {
-    run_batch(MODEL_PATH, IMG_DIR).unwrap();
+fn batch_squeezenet() {
+    run_batch(SQUEEZENET_PATH, IMG_DIR).unwrap();
 }
 
 fn run_batch<S: Into<String> + AsRef<std::path::Path> + Copy>(
@@ -200,6 +201,17 @@ fn run_batch<S: Into<String> + AsRef<std::path::Path> + Copy>(
     Ok(())
 }
 
+#[no_mangle]
+fn test_mobilenetv2() {
+    let model = std::fs::read(MOBILENETV2_PATH).unwrap();
+    inference_image(model, IMG_PATH).unwrap();
+}
+
+#[no_mangle]
+fn batch_mobilenetv2() {
+    run_batch(MOBILENETV2_PATH, IMG_DIR).unwrap();
+}
+
 fn inference_image<S: Into<String> + AsRef<std::path::Path> + Clone + Debug>(
     model: Vec<u8>,
     img: S,
@@ -209,7 +221,7 @@ where
 {
     println!(
         "integration::inference_image: loaded module {}  with size {} bytes",
-        MODEL_PATH,
+        SQUEEZENET_PATH,
         model.len()
     );
     let g = unsafe {
@@ -259,15 +271,19 @@ where
 
     let labels = BufReader::new(std::fs::File::open(LABELS_PATH).unwrap());
 
+    let mut actual: Vec<String> = Vec::new();
     let labels: Vec<String> = labels.lines().map(|line| line.unwrap()).collect();
     println!("integration::inference_image: results for image {:#?}", img);
     for i in 0..5 {
+        let c = labels[probabilities[i].0].clone();
+        actual.push(c);
         println!(
             "class={} ({}); probability={}",
             labels[probabilities[i].0], probabilities[i].0, probabilities[i].1
         );
     }
-    assert_inferred_class(img.into(), &labels[probabilities[0].0]);
+
+    assert_contains_class(img.into(), actual);
 
     println!("\n");
 
