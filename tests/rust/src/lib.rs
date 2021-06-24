@@ -115,11 +115,3 @@ pub fn assert_contains_class(img: String, labels: Vec<String>) {
         .collect();
     assert_eq!(true, labels.contains(&class));
 }
-
-#[test]
-fn test_class_from_path() {
-    assert_inferred_class(
-        "tests/testdata/images/n04350905.jpg".to_string(),
-        &"n04350905 suit, suit of clothes".to_string(),
-    );
-}
