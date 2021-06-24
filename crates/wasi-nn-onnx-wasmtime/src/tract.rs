@@ -19,6 +19,7 @@ use crate::{
 use ndarray::Array;
 use tract_onnx::prelude::Tensor as TractTensor;
 use tract_onnx::prelude::*;
+use tract_onnx::{prelude::Graph as TractGraph, tract_hir::infer::InferenceOp};
 
 /// Main context struct for which we implement the WasiEphemeralNn trait.
 #[derive(Default)]
@@ -34,13 +35,13 @@ pub struct State {
 
 #[derive(Debug)]
 pub struct TractSession {
-    pub graph: TypedModel,
+    pub graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>,
     pub input_tensors: Option<Vec<TractTensor>>,
     pub output_tensors: Option<Vec<Arc<TractTensor>>>,
 }
 
 impl TractSession {
-    pub fn with_graph(graph: TypedModel) -> Self {
+    pub fn with_graph(graph: TractGraph<InferenceFact, Box<dyn InferenceOp>>) -> Self {
         Self {
             graph,
             input_tensors: None,
@@ -105,9 +106,7 @@ impl WasiEphemeralNn for WasiNnTractCtx {
             }
         };
 
-        let model = tract_onnx::onnx()
-            .model_for_read(&mut model_bytes)?
-            .into_optimized()?;
+        let model = tract_onnx::onnx().model_for_read(&mut model_bytes).unwrap();
 
         let gec = state.key(state.executions.keys());
         log::info!(
@@ -156,7 +155,7 @@ impl WasiEphemeralNn for WasiNnTractCtx {
 
         execution.graph.set_input_fact(
             index as usize,
-            TypedFact::dt_shape(f32::datum_type(), shape.clone()),
+            InferenceFact::dt_shape(f32::datum_type(), shape.clone()),
         )?;
 
         let data = bytes_to_f32_vec(tensor.data.as_slice()?.to_vec())?;
@@ -257,9 +256,13 @@ impl WasiEphemeralNn for WasiNnTractCtx {
             input_tensors.len()
         );
 
+        // Some ONNX models don't specify their input tensor
+        // shapes completely, so we can only call `.into_optimized()` after we
+        // have set the input tensor shapes.
         let output_tensors = execution
             .graph
             .clone()
+            .into_optimized()?
             .into_runnable()?
             .run(input_tensors.into())?;
 
