@@ -174,13 +174,8 @@ fn compute() {
 }
 
 #[no_mangle]
-<<<<<<< HEAD
 fn test_squeezenet() {
     let model = std::fs::read(SQUEEZENET_PATH).unwrap();
-=======
-fn get_output() {
-    let model = std::fs::read(MODEL_PATH).unwrap();
->>>>>>> 82f98e2... Add instantiation time to binary and only load model once from disk in test
     inference_image(model, IMG_PATH).unwrap();
 }
 
