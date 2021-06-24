@@ -1,19 +1,27 @@
-use wasi_common::WasiCtx;
-use wasi_nn_onnx_wasmtime::WasiNnCtx;
-
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
-
-    use crate::Ctx;
     use anyhow::{Context, Error};
+    use std::path::Path;
     use wasi_cap_std_sync::Dir;
-    use wasi_nn_onnx_wasmtime::WasiNnCtx;
+    use wasi_common::WasiCtx;
+    use wasi_nn_onnx_wasmtime::{WasiNnOnnxCtx, WasiNnTractCtx};
     use wasmtime::*;
     use wasmtime_wasi::sync::WasiCtxBuilder;
 
+    #[derive(Default)]
+    struct Ctx {
+        pub wasi_ctx: Option<WasiCtx>,
+        pub nn_ctx: Option<WasiNnOnnxCtx>,
+        pub tract_ctx: Option<WasiNnTractCtx>,
+    }
+
+    enum Runtime {
+        C,
+        Tract,
+    }
+
     #[test]
-    fn rust_tests() {
+    fn test_c_api() {
         init();
         run_tests(
             "target/wasm32-wasi/release/wasi-nn-rust.wasm",
@@ -26,6 +34,26 @@ mod tests {
                 "get_output",
                 "batch",
             ],
+            Runtime::C,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_tract() {
+        init();
+        run_tests(
+            "target/wasm32-wasi/release/wasi-nn-rust.wasm",
+            vec![
+                "load_empty",
+                "load_model",
+                "init_execution_context",
+                "set_input",
+                "compute",
+                "get_output",
+                "batch",
+            ],
+            Runtime::Tract,
         )
         .unwrap();
     }
@@ -37,8 +65,9 @@ mod tests {
     fn run_tests<S: Into<String> + AsRef<Path> + Clone>(
         filename: S,
         funcs: Vec<S>,
+        r: Runtime,
     ) -> Result<(), Error> {
-        let (instance, mut store) = create_instance(filename.clone())?;
+        let (instance, mut store) = create_instance(filename.clone(), r)?;
         for f in funcs {
             log::info!(
                 "executing {} for module {}",
@@ -56,13 +85,14 @@ mod tests {
 
     fn create_instance<S: Into<String> + AsRef<Path>>(
         filename: S,
+        r: Runtime,
     ) -> Result<(Instance, Store<Ctx>), Error> {
         let engine = Engine::default();
         let mut store = Store::new(&engine, Ctx::default());
         let mut linker = Linker::new(&engine);
         linker.allow_unknown_exports(true);
 
-        populate_with_wasi(&mut store, &mut linker, vec!["tests/testdata"])?;
+        populate_with_wasi(&mut store, &mut linker, vec!["tests/testdata"], r)?;
 
         let module = Module::from_file(linker.engine(), filename)?;
         let instance = linker.instantiate(&mut store, &module)?;
@@ -74,6 +104,7 @@ mod tests {
         store: &mut Store<Ctx>,
         linker: &mut Linker<Ctx>,
         dirs: Vec<&str>,
+        r: Runtime,
     ) -> Result<(), Error> {
         wasmtime_wasi::add_to_linker(linker, |host| host.wasi_ctx.as_mut().unwrap())?;
 
@@ -92,15 +123,19 @@ mod tests {
 
         store.data_mut().wasi_ctx = Some(builder.build());
 
-        wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
-        store.data_mut().nn_ctx = Some(WasiNnCtx::default());
+        match r {
+            Runtime::C => {
+                wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
+                store.data_mut().nn_ctx = Some(WasiNnOnnxCtx::default());
+            }
+            Runtime::Tract => {
+                wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| {
+                    host.tract_ctx.as_mut().unwrap()
+                })?;
+                store.data_mut().tract_ctx = Some(WasiNnTractCtx::default());
+            }
+        };
 
         Ok(())
     }
-}
-
-#[derive(Default)]
-struct Ctx {
-    pub wasi_ctx: Option<WasiCtx>,
-    pub nn_ctx: Option<WasiNnCtx>,
 }

@@ -99,7 +99,7 @@ pub fn image_to_tensor<S: Into<String> + AsRef<std::path::Path> + Debug>(
     Ok(f32_vec_to_bytes(array.as_slice().unwrap().to_vec()))
 }
 
-pub fn assert_inferred_class(img: String, exp: &String) {
+pub fn assert_inferred_class(img: String, exp: &str) {
     let class = std::path::PathBuf::from(img);
     let class = class
         .file_name()
