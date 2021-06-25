@@ -344,5 +344,8 @@ fn infernece_identity_model() {
 
     let output_tensor = Array::from_shape_vec((1, 4), output_f32).unwrap();
     assert!(ndarray == output_tensor);
-    println!("Output tensor: {:#?}", output_tensor);
+    println!(
+        "integration::infernece_identity_model: Output tensor: {:#?}",
+        output_tensor
+    );
 }
