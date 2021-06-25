@@ -11,9 +11,7 @@ use crate::{
 };
 use ndarray::{Array, Dim, IxDynImpl, ShapeError};
 use onnxruntime::{
-    environment::Environment,
-    session::{Output, OwnedSession},
-    tensor::OrtOwnedTensor,
+    environment::Environment, session::OwnedSession, tensor::OrtOwnedTensor,
     GraphOptimizationLevel, LoggingLevel, OrtError, TensorElementDataType,
 };
 use std::{
@@ -182,15 +180,6 @@ impl WasiEphemeralNn for WasiNnOnnxCtx {
             }
         };
 
-        let expected = execution
-            .session
-            .inputs
-            .get(index as usize)
-            .unwrap()
-            .dimensions()
-            .map(|d| d.unwrap())
-            .collect::<Vec<usize>>();
-
         let input = tensor
             .dimensions
             .as_slice()?
@@ -201,11 +190,20 @@ impl WasiEphemeralNn for WasiNnOnnxCtx {
         let input_type: TensorElementDataType = tensor.type_.into();
 
         log::info!(
-            "set_input: expected dimensions: {:#?}, input dimensions: {:#?}, input type: {:#?}",
-            expected,
+            "set_input: input dimensions: {:#?}, input type: {:#?}",
             input,
             input_type
         );
+
+        // TODO
+        // Some models only set partial dimensions here, so checking the input and
+        // expected dimensions are equal will have to take that into account.
+        if let Some(exp) = execution.session.inputs.get(index as usize) {
+            log::info!(
+                "set_input: model expects input tensor dimensions: {:#?}",
+                exp
+            );
+        };
 
         // for simplicity, the input and output tensors supported for now are F32 only.
         // In the future, we want to match here and coerce the input data to the correct
@@ -219,8 +217,7 @@ impl WasiEphemeralNn for WasiNnOnnxCtx {
             _ => {}
         };
         // TODO
-        // - [ ] check that the expected and actual shapes are equal
-        // - [ ] match on the tensor data type and coerce input to right type
+        // match on the tensor data type and coerce input to right type
         let data = bytes_to_f32_vec(tensor.data.as_slice()?.to_vec())?;
         let input = Array::from_shape_vec(input, data)?;
 
@@ -312,8 +309,6 @@ impl WasiEphemeralNn for WasiNnOnnxCtx {
             input_tensors.len()
         );
 
-        let outputs: Vec<Output> = execution.session.outputs.clone();
-
         let output_tensors: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>> =
             execution.session.run(input_tensors)?;
 
@@ -333,7 +328,7 @@ impl WasiEphemeralNn for WasiNnOnnxCtx {
                 return Err(WasiNnError::RuntimeError);
             }
             None => {
-                execution.output_tensors = Some(vec_from_out_tensors(output_tensors, outputs)?);
+                execution.output_tensors = Some(output_vec_from_tensors(output_tensors)?);
             }
         };
         Ok(())
@@ -387,26 +382,15 @@ impl From<TensorType> for TensorElementDataType {
     }
 }
 
-fn vec_from_out_tensors(
+fn output_vec_from_tensors(
     tensors: Vec<OrtOwnedTensor<'_, '_, f32, Dim<IxDynImpl>>>,
-    outputs: Vec<Output>,
 ) -> Result<Vec<Array<f32, Dim<IxDynImpl>>>> {
     let mut res = Vec::new();
-    for index in 0..tensors.len() {
-        let shape = outputs
-            .get(index)
-            .unwrap()
-            .dimensions()
-            .map(|d| d.unwrap())
-            .collect::<Vec<usize>>();
-
-        log::info!("vec_from_out_tensors: output array shape:  {:#?}", shape);
-
-        let array = Array::from_shape_vec(
-            shape,
-            tensors.get(index).unwrap().as_slice().unwrap().to_vec(),
-        )?;
-        res.push(array);
+    for (_, tensor) in tensors.into_iter().enumerate() {
+        res.push(Array::from_shape_vec(
+            tensor.shape(),
+            tensor.as_slice().unwrap().to_vec(),
+        )?);
     }
 
     Ok(res)
