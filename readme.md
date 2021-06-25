@@ -42,7 +42,8 @@ specifically:
 
 The following represents a _very simple_ benchmark of running two computer
 vision models, [SqueezeNetV1][sq] and [MobileNetV2][mb], compiled natively, run
-with WASI NN with both back-ends, and run purely on WebAssembly using Tract:
+with WASI NN with both back-ends, and run purely on WebAssembly using Tract. All
+inferences are performed on the CPU-only for now:
 
 ![SqueezeNet  performance](docs/squeezenet.png)
 
@@ -52,12 +53,20 @@ A few notes on the performance:
 
 - this represents _very early_ data, on a limited number of runs and models, and
   should only be interpreted in terms of the relative performance difference we
-  could expect between native, WASI NN and pure WebAssembly
+  can expect between native, WASI NN and pure WebAssembly
 - the ONNX runtime is running multi-threaded on the CPU _only_, as the GPU is
   not yet enabled
 - in each case, all tests are executing the same ONNX model on the same images
 - all WebAssembly modules (both those built with WASI NN and the ones running
   pure Wasm) are run with Wasmtime v0.28, with caching enabled
+- no other special optimizations have been performed on either module, and we
+  suspect that optimizations such as using
+  [`wasm-opt`](https://github.com/WebAssembly/binaryen),
+  [Wizer](https://github.com/bytecodealliance/wizer), or AOT compilation could
+  significantly improve module startup time.
+- there are known limitations in both runtimes that, when fixed, should also
+  significantly improve the performance
+
 - as we test with more ONNX models, the data should be updated
 
 ### Current limitations
