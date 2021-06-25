@@ -1,5 +1,5 @@
 use anyhow::Error;
-use ndarray::Array;
+use ndarray::{array, Array};
 use std::{
     fmt::Debug,
     io::{self, BufRead, BufReader},
@@ -10,6 +10,7 @@ use wasi_nn_rust::{
 };
 
 const MODEL_PATH: &str = "tests/testdata/models/squeezenet1.1-7.onnx";
+const IDENTITY_MODEL_PATH: &str = "tests/testdata/models/identity_input_output.onnx";
 const LABELS_PATH: &str = "tests/testdata/models/squeezenet_labels.txt";
 const IMG_PATH: &str = "tests/testdata/images/n04350905.jpg";
 const IMG_DIR: &str = "tests/testdata/images/";
@@ -270,4 +271,60 @@ where
     println!("\n");
 
     Ok(())
+}
+
+#[no_mangle]
+fn infernece_identity_model() {
+    let model = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
+    println!(
+        "integration::infernece_identity_model: loaded module {}  with size {} bytes",
+        IDENTITY_MODEL_PATH,
+        model.len()
+    );
+    let g = unsafe {
+        wasi_nn::load(
+            &[&model],
+            wasi_nn::GRAPH_ENCODING_ONNX,
+            wasi_nn::EXECUTION_TARGET_CPU,
+        )
+        .unwrap()
+    };
+    let gec = unsafe { wasi_nn::init_execution_context(g) }.unwrap();
+    println!(
+        "integration::infernece_identity_model: received graph execution context {}",
+        gec
+    );
+
+    let ndarray = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = ndarray.shape().iter().map(|u| *u as u32).collect();
+    println!(
+        "integration::infernece_identity_model: sending simple tensor: {:#?}",
+        ndarray
+    );
+
+    let tensor = f32_vec_to_bytes(ndarray.as_slice().unwrap().to_vec());
+    let tensor = wasi_nn::Tensor {
+        dimensions: &shape,
+        r#type: wasi_nn::TENSOR_TYPE_F32,
+        data: &tensor,
+    };
+
+    unsafe {
+        wasi_nn::set_input(gec, 0, tensor).unwrap();
+    }
+
+    unsafe {
+        wasi_nn::compute(gec).unwrap();
+    }
+
+    let mut buffer = vec![0u8; 16];
+    unsafe {
+        wasi_nn::get_output(gec, 0, buffer.as_mut_ptr(), buffer.len() as u32).unwrap();
+    }
+
+    let output_f32 = bytes_to_f32_vec(buffer);
+
+    let output_tensor = Array::from_shape_vec((1, 4), output_f32).unwrap();
+    assert!(ndarray == output_tensor);
+    println!("Output tensor: {:#?}", output_tensor);
 }

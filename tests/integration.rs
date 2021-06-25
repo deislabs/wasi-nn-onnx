@@ -30,17 +30,30 @@ mod tests {
         "get_output",
         "batch",
     ];
+    const IDENTITY_INPUT_OUTPUT_TESTS: [&str; 1] = ["infernece_identity_model"];
 
     #[test]
     fn test_c_api() {
         init();
         run_tests(RUST_WASM_TEST, SQUEEZENET_TESTS.to_vec(), Runtime::C).unwrap();
+        run_tests(
+            RUST_WASM_TEST,
+            IDENTITY_INPUT_OUTPUT_TESTS.to_vec(),
+            Runtime::C,
+        )
+        .unwrap();
     }
 
     #[test]
     fn test_tract() {
         init();
         run_tests(RUST_WASM_TEST, SQUEEZENET_TESTS.to_vec(), Runtime::Tract).unwrap();
+        run_tests(
+            RUST_WASM_TEST,
+            IDENTITY_INPUT_OUTPUT_TESTS.to_vec(),
+            Runtime::C,
+        )
+        .unwrap();
     }
 
     fn init() {
