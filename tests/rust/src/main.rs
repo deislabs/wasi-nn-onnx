@@ -1,5 +1,5 @@
 use anyhow::Error;
-use ndarray::Array;
+use ndarray::{array, Array};
 use std::{
     fmt::Debug,
     io::{self, BufRead, BufReader},
@@ -9,6 +9,7 @@ use wasi_nn_rust::{
     assert_contains_class, bytes_to_f32_vec, f32_vec_to_bytes, image_to_tensor, NdArrayTensor,
 };
 
+const IDENTITY_MODEL_PATH: &str = "tests/testdata/models/identity_input_output.onnx";
 const SQUEEZENET_PATH: &str = "tests/testdata/models/squeezenet1.1-7.onnx";
 const MOBILENETV2_PATH: &str = "tests/testdata/models/mobilenetv2-7.onnx";
 const LABELS_PATH: &str = "tests/testdata/models/squeezenet_labels.txt";
@@ -288,4 +289,63 @@ where
     println!("\n");
 
     Ok(())
+}
+
+#[no_mangle]
+fn infernece_identity_model() {
+    let model = std::fs::read(IDENTITY_MODEL_PATH).unwrap();
+    println!(
+        "integration::infernece_identity_model: loaded module {}  with size {} bytes",
+        IDENTITY_MODEL_PATH,
+        model.len()
+    );
+    let g = unsafe {
+        wasi_nn::load(
+            &[&model],
+            wasi_nn::GRAPH_ENCODING_ONNX,
+            wasi_nn::EXECUTION_TARGET_CPU,
+        )
+        .unwrap()
+    };
+    let gec = unsafe { wasi_nn::init_execution_context(g) }.unwrap();
+    println!(
+        "integration::infernece_identity_model: received graph execution context {}",
+        gec
+    );
+
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
+    println!(
+        "integration::infernece_identity_model: sending simple tensor: {:#?}",
+        input_tensor
+    );
+
+    let tensor = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
+    let tensor = wasi_nn::Tensor {
+        dimensions: &shape,
+        r#type: wasi_nn::TENSOR_TYPE_F32,
+        data: &tensor,
+    };
+
+    unsafe {
+        wasi_nn::set_input(gec, 0, tensor).unwrap();
+    }
+
+    unsafe {
+        wasi_nn::compute(gec).unwrap();
+    }
+
+    let mut buffer = vec![0u8; 16];
+    unsafe {
+        wasi_nn::get_output(gec, 0, buffer.as_mut_ptr(), buffer.len() as u32).unwrap();
+    }
+
+    let output_f32 = bytes_to_f32_vec(buffer);
+
+    let output_tensor = Array::from_shape_vec((1, 4), output_f32).unwrap();
+    assert_eq!(input_tensor, output_tensor);
+    println!(
+        "integration::infernece_identity_model: Output tensor: {:#?}",
+        output_tensor
+    );
 }
