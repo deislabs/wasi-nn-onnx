@@ -21,7 +21,7 @@ mod tests {
     }
 
     const RUST_WASM_TEST: &str = "tests/rust/target/wasm32-wasi/release/wasi-nn-rust.wasm";
-    const INFERENCE_TESTS: [&str; 9] = [
+    const INFERENCE_TESTS: [&str; 10] = [
         "load_empty",
         "load_model",
         "init_execution_context",
@@ -31,6 +31,7 @@ mod tests {
         "batch_squeezenet",
         "test_mobilenetv2",
         "batch_mobilenetv2",
+        "infernece_identity_model",
     ];
 
     #[test]
