@@ -21,7 +21,7 @@ mod tests {
     }
 
     const RUST_WASM_TEST: &str = "tests/rust/target/wasm32-wasi/release/wasi-nn-rust.wasm";
-    const INFERENCE_TESTS: [&str; 9] = [
+    const INFERENCE_TESTS: [&str; 10] = [
         "load_empty",
         "load_model",
         "init_execution_context",
@@ -31,30 +31,18 @@ mod tests {
         "batch_squeezenet",
         "test_mobilenetv2",
         "batch_mobilenetv2",
+        "infernece_identity_model",
     ];
-    const IDENTITY_INPUT_OUTPUT_TESTS: [&str; 1] = ["infernece_identity_model"];
 
     #[test]
     fn test_c_api() {
         init();
-        run_tests(
-            RUST_WASM_TEST,
-            IDENTITY_INPUT_OUTPUT_TESTS.to_vec(),
-            Runtime::C,
-        )
-        .unwrap();
         run_tests(RUST_WASM_TEST, INFERENCE_TESTS.to_vec(), Runtime::C).unwrap();
     }
 
     #[test]
     fn test_tract() {
         init();
-        run_tests(
-            RUST_WASM_TEST,
-            IDENTITY_INPUT_OUTPUT_TESTS.to_vec(),
-            Runtime::C,
-        )
-        .unwrap();
         run_tests(RUST_WASM_TEST, INFERENCE_TESTS.to_vec(), Runtime::Tract).unwrap();
     }
 

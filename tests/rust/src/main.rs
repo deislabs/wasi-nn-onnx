@@ -313,14 +313,14 @@ fn infernece_identity_model() {
         gec
     );
 
-    let ndarray = array![[1.0, 2.0, 3.0, 4.0]];
-    let shape: Vec<u32> = ndarray.shape().iter().map(|u| *u as u32).collect();
+    let input_tensor = array![[1.0, 2.0, 3.0, 4.0]];
+    let shape: Vec<u32> = input_tensor.shape().iter().map(|u| *u as u32).collect();
     println!(
         "integration::infernece_identity_model: sending simple tensor: {:#?}",
-        ndarray
+        input_tensor
     );
 
-    let tensor = f32_vec_to_bytes(ndarray.as_slice().unwrap().to_vec());
+    let tensor = f32_vec_to_bytes(input_tensor.as_slice().unwrap().to_vec());
     let tensor = wasi_nn::Tensor {
         dimensions: &shape,
         r#type: wasi_nn::TENSOR_TYPE_F32,
@@ -343,7 +343,7 @@ fn infernece_identity_model() {
     let output_f32 = bytes_to_f32_vec(buffer);
 
     let output_tensor = Array::from_shape_vec((1, 4), output_f32).unwrap();
-    assert!(ndarray == output_tensor);
+    assert_eq!(input_tensor, output_tensor);
     println!(
         "integration::infernece_identity_model: Output tensor: {:#?}",
         output_tensor
