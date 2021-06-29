@@ -3,13 +3,13 @@ use crate::{
     witx::{
         types::{
             BufferSize, ExecutionTarget, Graph, GraphBuilderArray, GraphEncoding,
-            GraphExecutionContext, Tensor, TensorType,
+            GraphExecutionContext, NnErrno, Tensor, TensorType, UserErrorConversion,
         },
         wasi_ephemeral_nn::WasiEphemeralNn,
     },
     WasiNnError, WasiNnResult as Result,
 };
-use ndarray::{Array, Dim, IxDynImpl, ShapeError};
+use ndarray::{Array, Dim, IxDynImpl};
 use onnxruntime::{
     environment::Environment, session::OwnedSession, tensor::OrtOwnedTensor,
     GraphOptimizationLevel, LoggingLevel, OrtError, TensorElementDataType,
@@ -359,18 +359,6 @@ impl<'a> From<PoisonError<&mut State>> for WasiNnError {
     }
 }
 
-impl From<ShapeError> for WasiNnError {
-    fn from(_: ShapeError) -> Self {
-        WasiNnError::RuntimeError
-    }
-}
-
-impl From<std::io::Error> for WasiNnError {
-    fn from(_: std::io::Error) -> Self {
-        WasiNnError::RuntimeError
-    }
-}
-
 impl From<TensorType> for TensorElementDataType {
     fn from(tt: TensorType) -> Self {
         match tt {
@@ -378,6 +366,21 @@ impl From<TensorType> for TensorElementDataType {
 
             TensorType::U8 => Self::Uint8,
             TensorType::I32 => Self::Int32,
+        }
+    }
+}
+
+impl<'a> UserErrorConversion for WasiNnOnnxCtx {
+    fn nn_errno_from_wasi_nn_error(
+        &mut self,
+        e: WasiNnError,
+    ) -> std::result::Result<NnErrno, wiggle::Trap> {
+        eprintln!("Host error: {:?}", e);
+        match e {
+            WasiNnError::GuestError(_) => unimplemented!(),
+            WasiNnError::RuntimeError => unimplemented!(),
+            WasiNnError::OnnxError => unimplemented!(),
+            WasiNnError::InvalidEncodingError => unimplemented!(),
         }
     }
 }

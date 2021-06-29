@@ -9,7 +9,7 @@ use crate::{
     witx::{
         types::{
             BufferSize, ExecutionTarget, Graph, GraphBuilderArray, GraphEncoding,
-            GraphExecutionContext, Tensor,
+            GraphExecutionContext, NnErrno, Tensor, UserErrorConversion,
         },
         wasi_ephemeral_nn::WasiEphemeralNn,
     },
@@ -305,5 +305,20 @@ impl<'a> From<PoisonError<&mut State>> for WasiNnError {
 impl From<wiggle::anyhow::Error> for WasiNnError {
     fn from(_: wiggle::anyhow::Error) -> Self {
         WasiNnError::RuntimeError
+    }
+}
+
+impl<'a> UserErrorConversion for WasiNnTractCtx {
+    fn nn_errno_from_wasi_nn_error(
+        &mut self,
+        e: WasiNnError,
+    ) -> std::result::Result<NnErrno, wiggle::Trap> {
+        eprintln!("Host error: {:?}", e);
+        match e {
+            WasiNnError::GuestError(_) => unimplemented!(),
+            WasiNnError::RuntimeError => unimplemented!(),
+            WasiNnError::OnnxError => unimplemented!(),
+            WasiNnError::InvalidEncodingError => unimplemented!(),
+        }
     }
 }
