@@ -77,8 +77,6 @@ A few notes on the performance:
   This should not affect popular models (such as computer vision scenarios).
 - GPU execution is not yet enabled in the native ONNX runtime
   ([#9](https://github.com/deislabs/wasi-nn-onnx/issues/9))
-- only the Tract implementation currently executes on Windows
-  ([#11](https://github.com/deislabs/wasi-nn-onnx/issues/11))
 
 ### Building, running, and writing WebAssembly modules that use WASI NN
 
@@ -87,14 +85,15 @@ The following are the build instructions for Linux. First, download
 and unarchive it. Then, build the helper binary:
 
 ```
-➜ cargo build --release --bin wasmtime-onnx
+➜ cargo build --release --bin wasmtime-onnx --features  tract,c_onnxruntime
 ```
 
 At this point, follow [the Rust example and test](./tests/rust/src/main.rs) to
 build a WebAssembly module that uses this API, which uses the
 [Rust client bindings for the API](https://github.com/bytecodealliance/wasi-nn).
 
-Then, to run the example and test from this repository:
+Then, to run the example and test from this repository, using the native ONNX
+runtime:
 
 ```
 ➜ LD_LIBRARY_PATH=<PATH-TO-ONNX>/onnx/onnxruntime-linux-x64-1.6.0/lib RUST_LOG=wasi_nn_onnx_wasmtime=info,wasmtime_onnx=info \
@@ -102,7 +101,8 @@ Then, to run the example and test from this repository:
         tests/rust/target/wasm32-wasi/release/wasi-nn-rust.wasm \
         --cache cache.toml \
         --dir tests/testdata \
-        --invoke batch_squeezenet
+        --invoke batch_squeezenet \
+        --c-runtime
 ```
 
 Or to run the same function using the Tract runtime:
@@ -114,8 +114,13 @@ Or to run the same function using the Tract runtime:
       --cache cache.toml \
       --dir tests/testdata \
       --invoke batch_squeezenet \
-      --tract
 ```
+
+The project exposes two Cargo features: `tract`, which is the default feature,
+and `c_onnxruntime`, which when enabled, will compile support for using the C
+API for the ONNX runtime. After building with this feature enabled, running the
+binary requires passing the path to the ONNX shared libraries, either as part of
+the PATH, or by setting the `LD_LIBRARY_PATH`.
 
 ### Contributing
 

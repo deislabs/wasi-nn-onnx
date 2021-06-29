@@ -3,7 +3,9 @@ use std::time::Instant;
 use anyhow::{bail, Context, Error};
 use structopt::StructOpt;
 use wasi_cap_std_sync::WasiCtxBuilder;
-use wasi_nn_onnx_wasmtime::{WasiNnOnnxCtx, WasiNnTractCtx};
+#[cfg(feature = "c_onnxruntime")]
+use wasi_nn_onnx_wasmtime::WasiNnOnnxCtx;
+use wasi_nn_onnx_wasmtime::WasiNnTractCtx;
 use wasmtime::{AsContextMut, Config, Engine, Func, Instance, Linker, Module, Store, Val, ValType};
 use wasmtime_wasi::*;
 
@@ -34,10 +36,10 @@ struct Opt {
     vars: Vec<(String, String)>,
 
     #[structopt(
-        long = "tract",
-        help = "If enabled, the inference will be executed using the Tract ONNX runtime"
+        long = "c-runtime",
+        help = "If enabled, the inference will be executed using the C ONNX Runtime"
     )]
-    use_tract: bool,
+    c_runtime: bool,
 
     #[structopt(long = "dir", number_of_values = 1, value_name = "DIRECTORY")]
     dirs: Vec<String>,
@@ -58,9 +60,9 @@ async fn main() -> Result<(), Error> {
 
     let dirs = compute_preopen_dirs(opt.dirs, opt.map_dirs)?;
 
-    let runtime = match opt.use_tract {
-        true => Runtime::Tract,
-        false => Runtime::C,
+    let runtime = match opt.c_runtime {
+        true => Runtime::C,
+        false => Runtime::Tract,
     };
 
     let start = Instant::now();
@@ -135,8 +137,15 @@ fn populate_with_wasi(
 
     match runtime {
         Runtime::C => {
-            wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
-            store.data_mut().nn_ctx = Some(WasiNnOnnxCtx::default());
+            #[cfg(not(feature = "c_onnxruntime"))]
+            {
+                bail!("Cannot enable the C ONNX Runtime when the binary is not compiled with this feature.");
+            }
+            #[cfg(feature = "c_onnxruntime")]
+            {
+                wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.nn_ctx.as_mut().unwrap())?;
+                store.data_mut().nn_ctx = Some(WasiNnOnnxCtx::default());
+            }
         }
         Runtime::Tract => {
             wasi_nn_onnx_wasmtime::add_to_linker(linker, |host| host.tract_ctx.as_mut().unwrap())?;
@@ -230,6 +239,7 @@ fn parse_map_dirs(s: &str) -> Result<(String, String), Error> {
 #[derive(Default)]
 struct Ctx {
     pub wasi_ctx: Option<WasiCtx>,
+    #[cfg(feature = "c_onnxruntime")]
     pub nn_ctx: Option<WasiNnOnnxCtx>,
     pub tract_ctx: Option<WasiNnTractCtx>,
 }

@@ -6,8 +6,8 @@ const RUST_EXAMPLE: &str = "rust";
 fn main() {
     println!("cargo:rerun-if-changed=tests/rust/src/main.rs");
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/lib.rs");
-    println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/wasi_nn_onnx.rs");
-    println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/ctx.rs");
+    println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/onnx_runtime.rs");
+    println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/tract.rs");
     println!("cargo:rerun-if-changed=crates/wasi-nn-onnx-wasmtime/src/witx.rs");
 
     cargo_build_example(TESTS_DIR, RUST_EXAMPLE);
