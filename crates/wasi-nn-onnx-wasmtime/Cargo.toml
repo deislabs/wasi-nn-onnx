@@ -22,7 +22,7 @@ wasi-cap-std-sync = "0.28"
 wiggle =  "0.28"
 
 [features]
-default = ["c_onnxruntime", "tract"]
+default = ["tract"]
 
 c_onnxruntime = ["onnxruntime"]
 tract = ["tract-onnx"]

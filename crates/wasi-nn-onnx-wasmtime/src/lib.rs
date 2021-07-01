@@ -1,8 +1,11 @@
 pub mod bytes;
+#[cfg(feature = "c_onnxruntime")]
 pub mod onnx_runtime;
+
 pub mod tract;
 pub mod witx;
 
+#[cfg(feature = "c_onnxruntime")]
 pub use onnx_runtime::WasiNnOnnxCtx;
 pub use tract::WasiNnTractCtx;
 pub use witx::wasi_ephemeral_nn::add_to_linker;
