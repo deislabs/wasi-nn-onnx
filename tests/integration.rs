@@ -2,7 +2,7 @@
 mod tests {
     use anyhow::{Context, Error};
     use std::path::Path;
-    use wasi_cap_std_sync::Dir;
+    use wasi_cap_std_sync::{ambient_authority, Dir};
     use wasi_common::WasiCtx;
     use wasi_nn_onnx_wasmtime::{WasiNnOnnxCtx, WasiNnTractCtx};
     use wasmtime::*;
@@ -103,7 +103,7 @@ mod tests {
 
         for dir in dirs.iter() {
             builder = builder.preopened_dir(
-                unsafe { Dir::open_ambient_dir(dir) }
+                Dir::open_ambient_dir(dir, ambient_authority())
                     .with_context(|| format!("failed to open directory '{}'", dir))?,
                 dir,
             )?;
