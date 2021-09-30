@@ -165,7 +165,7 @@ fn compute_preopen_dirs(
     for dir in dirs.iter() {
         preopen_dirs.push((
             dir.clone(),
-            unsafe { Dir::open_ambient_dir(dir) }
+            Dir::open_ambient_dir(dir, ambient_authority())
                 .with_context(|| format!("failed to open directory '{}'", dir))?,
         ));
     }
@@ -173,7 +173,7 @@ fn compute_preopen_dirs(
     for (guest, host) in map_dirs.iter() {
         preopen_dirs.push((
             guest.clone(),
-            unsafe { Dir::open_ambient_dir(host) }
+            Dir::open_ambient_dir(host, ambient_authority())
                 .with_context(|| format!("failed to open directory '{}'", host))?,
         ));
     }
