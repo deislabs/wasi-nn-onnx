@@ -65,7 +65,7 @@ mod tests {
             let func = instance
                 .get_func(&mut store, f.into().as_str())
                 .unwrap_or_else(|| panic!("cannot find function"));
-            func.call(&mut store, &[])?;
+            func.call(&mut store, &[], &mut vec![])?;
         }
 
         Ok(())

@@ -1,28 +1,28 @@
 [package]
-name    = "wasi-nn-onnx-wasmtime"
-version = "0.1.0"
-authors = ["Radu M <root@radu.sh>"]
-edition = "2018"
+    name    = "wasi-nn-onnx-wasmtime"
+    version = "0.1.0"
+    authors = ["Radu M <root@radu.sh>"]
+    edition = "2021"
 
 [dependencies]
-anyhow            = "1.0"
-byteorder         = "1.4"
-log               = { version = "0.4", default-features = false }
-ndarray           = "0.15"
-onnxruntime       = { git = "https://github.com/radu-matei/onnxruntime-rs", branch = "owned-session", optional = true }
-thiserror         = "1.0"
-tract-data        = "0.14"
-tract-linalg      = "0.14"
-tract-onnx        = { version = "0.14", optional = true }
-wasmtime          = "0.30"
-wasmtime-runtime  = "0.30"
-wasmtime-wasi     = "0.30"
-wasi-common       = "0.30"
-wasi-cap-std-sync = "0.30"
-wiggle            = "0.30"
+    anyhow            = "1.0"
+    byteorder         = "1.4"
+    log               = { version = "0.4", default-features = false }
+    ndarray           = "0.15"
+    onnxruntime       = { git = "https://github.com/radu-matei/onnxruntime-rs", branch = "owned-session", optional = true }
+    thiserror         = "1.0"
+    tract-data        = "0.14"
+    tract-linalg      = "0.14"
+    tract-onnx        = { version = "0.14", optional = true }
+    wasmtime          = "0.31"
+    wasmtime-runtime  = "0.31"
+    wasmtime-wasi     = "0.31"
+    wasi-common       = "0.31"
+    wasi-cap-std-sync = "0.31"
+    wiggle            = "0.31"
 
 [features]
-default = ["tract"]
+    default = ["tract"]
 
-c_onnxruntime = ["onnxruntime"]
-tract         = ["tract-onnx"]
+    c_onnxruntime = ["onnxruntime"]
+    tract         = ["tract-onnx"]
