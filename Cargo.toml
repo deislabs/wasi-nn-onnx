@@ -1,35 +1,34 @@
 [package]
-name    = "wasi-nn-onnx-sample"
-version = "0.1.0"
-authors = ["Radu M <root@radu.sh>"]
-edition = "2018"
+    name    = "wasi-nn-onnx-sample"
+    version = "0.1.0"
+    authors = ["Radu M <root@radu.sh>"]
+    edition = "2021"
 
 [dependencies]
-anyhow                          = "1.0"
-log                             = { version = "0.4", default-features = false }
-env_logger                      = "0.8"
-structopt                       = "0.3.21"
-tokio                           = { version = "1.4.0", features = ["full"] }
-wasmtime                        = "0.30"
-wasmtime-runtime                = "0.30"
-wasmtime-wasi                   = "0.30"
-wasi-common                     = "0.30"
-wasi-cap-std-sync               = "0.30"
-wasi-experimental-http-wasmtime = "0.6"
-wasi-nn-onnx-wasmtime           = { path = "./crates/wasi-nn-onnx-wasmtime", default-features = true }
+    anyhow                = "1.0"
+    log                   = { version = "0.4", default-features = false }
+    env_logger            = "0.9"
+    structopt             = "0.3"
+    tokio                 = { version = "1.4", features = ["full"] }
+    wasmtime              = "0.31"
+    wasmtime-runtime      = "0.31"
+    wasmtime-wasi         = "0.31"
+    wasi-common           = "0.31"
+    wasi-cap-std-sync     = "0.31"
+    wasi-nn-onnx-wasmtime = { path = "./crates/wasi-nn-onnx-wasmtime", default-features = true }
 
 [workspace]
-members = [
-    "crates/wasi-nn-onnx-wasmtime",
-    "crates/wasi-nn/rust",
-    # "tests/rust"
-]
-exclude = ["tests/rust"]
+    members = [
+        "crates/wasi-nn-onnx-wasmtime",
+        "crates/wasi-nn/rust",
+        # "tests/rust"
+    ]
+    exclude = ["tests/rust"]
 
 [[bin]]
-name = "wasmtime-onnx"
-path = "bin/wasmtime-onnx.rs"
+    name = "wasmtime-onnx"
+    path = "bin/wasmtime-onnx.rs"
 
 [features]
-c_onnxruntime = ["wasi-nn-onnx-wasmtime/c_onnxruntime"]
-tract         = ["wasi-nn-onnx-wasmtime/tract"]
+    c_onnxruntime = ["wasi-nn-onnx-wasmtime/c_onnxruntime"]
+    tract         = ["wasi-nn-onnx-wasmtime/tract"]
